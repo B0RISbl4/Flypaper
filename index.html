@@ -1,0 +1,45 @@
+<!doctype html>
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; height: 100%; background: #0c1018; overflow: hidden;
+               font-family: "Segoe UI", sans-serif; color: #ebeef5; }
+  #card { position: absolute; left: 8vw; bottom: 12vh;
+          opacity: 1; transition: opacity 1.5s ease; }
+  #card.hidden { opacity: 0; }
+  #call { font-size: 14vh; line-height: 1; }
+  #route { font-size: 6vh; margin-top: 2vh; }
+  #meta { font-size: 3.4vh; margin-top: 1.5vh; color: #828c9e; }
+  .empty #call { font-size: 9vh; color: #828c9e; }
+</style>
+<div id="card" class="hidden">
+  <div id="call"></div><div id="route"></div><div id="meta"></div>
+</div>
+<script>
+  const card = document.getElementById("card");
+  let current;   // undefined до первого ответа
+
+  function show(a) {
+    card.classList.toggle("empty", !a);
+    call.textContent = a ? (a.callsign || "—") : "Clear sky";
+    route.textContent = a ? `${a.type}   ${a.origin || "—"} → ${a.dest || "—"}` : "";
+    meta.textContent = a
+      ? `${Math.round(a.alt_m)} m   ${Math.round(a.speed_kt)} kt   ` +
+        `${(a.dist_m / 1000).toFixed(1)} km   az ${Math.round(a.bearing)}°   el ${Math.round(a.elevation)}°`
+      : "";
+  }
+
+  async function tick() {
+    try {
+      const { aircraft } = await (await fetch("/api")).json();
+      const key = aircraft ? aircraft.callsign : null;
+      if (key !== current) {
+        card.classList.add("hidden");
+        setTimeout(() => { show(aircraft); card.classList.remove("hidden"); }, current === undefined ? 0 : 1500);
+        current = key;
+      } else if (aircraft) {
+        meta.textContent = ""; show(aircraft);   // обновить цифры без перехода
+      }
+    } catch (e) {}
+  }
+  tick(); setInterval(tick, 10000);
+</script>
