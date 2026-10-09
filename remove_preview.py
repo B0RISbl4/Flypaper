@@ -61,6 +61,7 @@
 
 Запуск:
     python remove_preview.py input.png output.png [--debug]
+Размеры полосы и надписи масштабируются относительно базовых картинок 600 px.
 Зависимости: numpy, opencv-python, scipy.
 """
 
@@ -74,7 +75,14 @@ from scipy.optimize import least_squares
 
 BAND_WIDTH = 150.0                  # ширина полосы, px
 ANGLE_RANGE = (25.0, 65.0)          # где искать угол полосы, градусы
+REFERENCE_SIZE = 600                # размер, для которого заданы параметры водяного знака
 TEMPLATE_FILE = Path(__file__).with_name("preview_template.png")
+
+
+def image_scale(shape):
+    """Масштаб водяного знака относительно исходных картинок 600 px."""
+    return max(shape) / REFERENCE_SIZE
+
 
 def tol(levels):
     """Порог в долях [0, 1] по числу уровней яркости 0..255. Пороги рассчитаны
@@ -85,10 +93,15 @@ def tol(levels):
 # =========================================================== ввод / вывод
 
 def load_image(path):
-    """Читает PNG/JPG в premultiplied RGBA float64 [0, 1]."""
-    im = cv2.imread(str(path), cv2.IMREAD_UNCHANGED)
+    """Читает PNG/JPG из файла или байтов в premultiplied RGBA float64 [0, 1]."""
+    encoded = isinstance(path, (bytes, bytearray, memoryview))
+    if encoded:
+        im = cv2.imdecode(np.frombuffer(path, dtype=np.uint8), cv2.IMREAD_UNCHANGED)
+    else:
+        im = cv2.imread(str(path), cv2.IMREAD_UNCHANGED)
     if im is None:
-        raise SystemExit(f"не удалось открыть {path}")
+        source = "полученные данные" if encoded else path
+        raise SystemExit(f"не удалось декодировать изображение: {source}")
     dtype = im.dtype
     scale = float(np.iinfo(dtype).max) if np.issubdtype(dtype, np.integer) else 1.0
     im = im.astype(np.float64) / scale
@@ -101,6 +114,17 @@ def load_image(path):
     return X, has_alpha, dtype
 
 
+def remove_image(X, debug=None, verbose=True):
+    """Удаляет полосу и надпись из уже загруженного изображения."""
+    scale = image_scale(X.shape[:2])
+    X1, cov, geom = remove_band(X, verbose=verbose, scale=scale)
+    if debug is not None:
+        cv2.imwrite(str(debug / "debug_band_cov.png"), np.round(cov * 255).astype(np.uint8))
+        cv2.imwrite(str(debug / "debug_no_band.png"), to_display(X1))
+
+    return remove_text(X1, cov, geom, debug, verbose=verbose, scale=scale)
+
+
 def save_image(path, X, has_alpha, dtype):
     X = np.clip(X, 0, 1)
     a = X[..., 3:]
@@ -108,7 +132,8 @@ def save_image(path, X, has_alpha, dtype):
     rgb = np.clip(rgb, 0, 1)[..., ::-1]                # RGB -> BGR
     out = np.dstack([rgb, a]) if has_alpha else rgb
     scale = float(np.iinfo(dtype).max) if np.issubdtype(dtype, np.integer) else 1.0
-    cv2.imwrite(str(path), np.round(out * scale).astype(dtype))
+    if not cv2.imwrite(str(path), np.round(out * scale).astype(dtype)):
+        raise OSError(f"не удалось сохранить изображение: {path}")
 
 
 def to_display(X, bg=1.0):
@@ -163,9 +188,17 @@ def edge_scores(X, phi, step_thr=None):
     return u_vals[2:-2], score
 
 
-def find_band_coarse(X, width=BAND_WIDTH, angle_range=ANGLE_RANGE):
+def find_band_coarse(X, width=BAND_WIDTH, angle_range=ANGLE_RANGE, scale=1.0):
     """Перебор угла: ищем две параллельные прямые на расстоянии width,
     на которых перепад есть почти по всей длине."""
+    if not np.isclose(scale, 1.0):
+        h, w = X.shape[:2]
+        size = (max(1, round(w / scale)), max(1, round(h / scale)))
+        interpolation = cv2.INTER_AREA if scale > 1 else cv2.INTER_CUBIC
+        small = cv2.resize(X, size, interpolation=interpolation)
+        phi, rL, rR, score = find_band_coarse(small, width, angle_range)
+        return phi, rL * scale, rR * scale, score
+
     def search(angles):
         best = (-1, None, None)
         wi = int(round(width))
@@ -245,18 +278,24 @@ def fit_overlay(inner, outer, s_prior=0.7, tol_fit=None, iters=400, seed=0):
 
 def sample_points(img, P):
     """Билинейная выборка img в точках P (N, 2) в непрерывных координатах."""
-    mx = (P[:, 0] - 0.5).astype(np.float32).reshape(1, -1)
-    my = (P[:, 1] - 0.5).astype(np.float32).reshape(1, -1)
-    out = cv2.remap(img.astype(np.float32), mx, my, cv2.INTER_LINEAR,
-                    borderMode=cv2.BORDER_CONSTANT, borderValue=-1)
-    return out.reshape(P.shape[0], -1).astype(np.float64)
+    img = img.astype(np.float32)
+    out = np.empty((len(P), img.shape[2] if img.ndim == 3 else 1), np.float32)
+    for start in range(0, len(P), 4096):
+        points = P[start:start + 4096]
+        mx = (points[:, 0] - 0.5).astype(np.float32).reshape(1, -1)
+        my = (points[:, 1] - 0.5).astype(np.float32).reshape(1, -1)
+        sampled = cv2.remap(img, mx, my, cv2.INTER_LINEAR,
+                            borderMode=cv2.BORDER_CONSTANT, borderValue=-1)
+        out[start:start + len(points)] = sampled.reshape(len(points), -1)
+    return out.astype(np.float64)
 
 
-def edge_pairs(X, phi, rho_L, rho_R, offs=(5.0, 8.0)):
+def edge_pairs(X, phi, rho_L, rho_R, offs=(5.0, 8.0), scale=1.0):
     """Пары пикселей внутри/снаружи полосы у обоих краёв на однородном фоне."""
     n, d = frame_vectors(phi)
     _, (v0, v1) = frame_ranges(X.shape[:2], n, d)
     v = np.arange(v0, v1, 1.0)
+    offs = tuple(off * scale for off in offs)
     ins, outs = [], []
     for rho, out_sign in ((rho_L, -1), (rho_R, +1)):
         def at(off):
@@ -303,7 +342,7 @@ def band_coverage_at(P, phi, rho_L, rho_R):
     return coverage_cdf(rho_R - u, n) - coverage_cdf(rho_L - u, n)
 
 
-def refine_band(X, phi, rho_L, rho_R, k, s):
+def refine_band(X, phi, rho_L, rho_R, k, s, scale=1.0):
     """Субпиксельное уточнение (phi, rho_L, rho_R) по долям покрытия."""
     a = 1 - s
     n, _ = frame_vectors(phi)
@@ -315,12 +354,12 @@ def refine_band(X, phi, rho_L, rho_R, k, s):
 
     Ps, cs = [], []
     for rho, out_sign in ((rho_L, -1), (rho_R, +1)):
-        sel = np.abs(u_all - rho) < 3.0
+        sel = np.abs(u_all - rho) < 3.0 * scale
         P = P_all[sel]
         o = out_sign * n
-        C = sample_points(X, P + 6 * o)          # фон снаружи
-        C2 = sample_points(X, P + 9 * o)
-        I = sample_points(X, P - 6 * o)          # внутри полосы
+        C = sample_points(X, P + 6 * scale * o)  # фон снаружи
+        C2 = sample_points(X, P + 9 * scale * o)
+        I = sample_points(X, P - 6 * scale * o)  # внутри полосы
         ok = (C.min(1) >= 0) & (C2.min(1) >= 0) & (I.min(1) >= 0)
         ok &= np.abs(C - C2).max(1) < tol(2)
         ok &= np.abs(I - (k + s * C)).max(1) < tol(3)
@@ -335,7 +374,7 @@ def refine_band(X, phi, rho_L, rho_R, k, s):
         return band_coverage_at(P, p[0], p[1], p[2]) - c
 
     r = least_squares(resid, [phi, rho_L, rho_R], loss="soft_l1", f_scale=0.05,
-                      x_scale=[1e-3, 0.1, 0.1])
+                      x_scale=[1e-3, 0.1 * scale, 0.1 * scale])
     rms = np.sqrt(np.median(r.fun ** 2))
     return r.x[0], r.x[1], r.x[2], rms, len(c)
 
@@ -347,16 +386,17 @@ def band_coverage_map(shape, phi, rho_L, rho_R):
     return band_coverage_at(P, phi, rho_L, rho_R).reshape(h, w)
 
 
-def remove_band(X, verbose=True):
-    phi, rL, rR, sc = find_band_coarse(X)
+def remove_band(X, verbose=True, scale=None):
+    scale = image_scale(X.shape[:2]) if scale is None else scale
+    phi, rL, rR, sc = find_band_coarse(X, scale=scale)
     if verbose:
         print(f"[полоса] грубо: угол {np.degrees(phi):.2f}°, края u = {rL:.0f} / {rR:.0f},"
               f" перепад на {sc * 100:.0f}% длины")
-    inner, outer = edge_pairs(X, phi, rL, rR)
+    inner, outer = edge_pairs(X, phi, rL, rR, scale=scale)
     k, s, keep = fit_overlay(inner, outer)
-    phi, rL, rR, rms, npx = refine_band(X, phi, rL, rR, k, s)
+    phi, rL, rR, rms, npx = refine_band(X, phi, rL, rR, k, s, scale)
     # после уточнения геометрии — ещё раз оцениваем цвет по более точным парам
-    inner, outer = edge_pairs(X, phi, rL, rR)
+    inner, outer = edge_pairs(X, phi, rL, rR, scale=scale)
     k, s, keep = fit_overlay(inner, outer)
     a = 1 - s
     if verbose:
@@ -459,11 +499,19 @@ def grad_mag(img):
     return g
 
 
-def register_template(X1, lo, phi, rL, rR, max_across=20):
+def register_template(X1, lo, phi, rL, rR, max_across=20, scale=1.0):
     """Грубое совмещение: ищем сдвиг шаблона вдоль полосы (и немного поперёк)
     по нормированной корреляции карт градиентов. Возвращает
     (dt — сдвиг центра шаблона поперёк от середины полосы, vc — координата
     центра шаблона вдоль полосы, значение корреляции)."""
+    if not np.isclose(scale, 1.0):
+        h, w = X1.shape[:2]
+        size = (max(1, round(w / scale)), max(1, round(h / scale)))
+        interpolation = cv2.INTER_AREA if scale > 1 else cv2.INTER_CUBIC
+        small = cv2.resize(X1, size, interpolation=interpolation)
+        dt, vc, peak = register_template(small, lo, phi, rL / scale, rR / scale)
+        return dt * scale, vc * scale, peak
+
     n, d = frame_vectors(phi)
     rc = (rL + rR) / 2
     T, S = lo.shape
@@ -491,22 +539,22 @@ def register_template(X1, lo, phi, rL, rR, max_across=20):
     return dt, vc, peak
 
 
-def contour_samples(X1, m, band_cov, k, s):
+def contour_samples(X1, m, band_cov, k, s, scale=1.0):
     """Пиксели у контура букв, где фон с обеих сторон однородный.
     Для каждого: точка в 3 px снаружи (фон C) и в 3 px внутри буквы.
     Возвращает центры пикселей P, их цвета, C и цвета внутри."""
     gx = cv2.Sobel(m, cv2.CV_64F, 1, 0, ksize=3)
     gy = cv2.Sobel(m, cv2.CV_64F, 0, 1, ksize=3)
     mag = np.hypot(gx, gy)
-    sel = (m > 0.02) & (m < 0.98) & (mag > 0.5) & (band_cov > 0.999)
+    sel = (m > 0.02) & (m < 0.98) & (mag > 0.5 / scale) & (band_cov > 0.999)
     ys, xs = np.nonzero(sel)
     P = np.c_[xs + 0.5, ys + 0.5]
     g = -np.c_[gx[sel], gy[sel]] / mag[sel][:, None]      # наружу из буквы
-    I1, I2 = sample_points(X1, P - 3 * g), sample_points(X1, P - 4 * g)
-    O1, O2 = sample_points(X1, P + 3 * g), sample_points(X1, P + 4.5 * g)
-    mi = sample_points(m[..., None], P - 3 * g)[:, 0]
-    mo = sample_points(m[..., None], P + 3 * g)[:, 0]
-    bo = sample_points(band_cov[..., None], P + 4.5 * g)[:, 0]
+    I1, I2 = sample_points(X1, P - 3 * scale * g), sample_points(X1, P - 4 * scale * g)
+    O1, O2 = sample_points(X1, P + 3 * scale * g), sample_points(X1, P + 4.5 * scale * g)
+    mi = sample_points(m[..., None], P - 3 * scale * g)[:, 0]
+    mo = sample_points(m[..., None], P + 3 * scale * g)[:, 0]
+    bo = sample_points(band_cov[..., None], P + 4.5 * scale * g)[:, 0]
     ok = (mi > 0.95) & (mo < 0.02) & (bo > 0.999)
     ok &= (np.abs(I1 - I2).max(1) < tol(2)) & (np.abs(O1 - O2).max(1) < tol(2))
     if k is not None:
@@ -514,12 +562,12 @@ def contour_samples(X1, m, band_cov, k, s):
     return P[ok], X1[ys[ok], xs[ok]], O1[ok], I1[ok]
 
 
-def refine_registration(X1, hi, phi, rc, dt, vc, m, band_cov, k, s):
+def refine_registration(X1, hi, phi, rc, dt, vc, m, band_cov, k, s, scale=1.0):
     """Субпиксельное совмещение шаблона — как с краями полосы: в пикселях
     контура букв считаем долю покрытия по цветам и подгоняем под неё
     сдвиг шаблона (dt, vc)."""
     beta = 1 - s
-    P, Xp, C, _ = contour_samples(X1, m, band_cov, k, s)
+    P, Xp, C, _ = contour_samples(X1, m, band_cov, k, s, scale)
     D = k - beta * C
     den = (D ** 2).sum(1)
     ok = den > (12 / 255) ** 2
@@ -530,27 +578,33 @@ def refine_registration(X1, hi, phi, rc, dt, vc, m, band_cov, k, s):
     def resid(p):
         return matte_at_points(P, hi, phi, rc, p[0], p[1]) - m_data
 
-    r = least_squares(resid, [dt, vc], loss="soft_l1", f_scale=0.05, diff_step=1e-3)
+    r = least_squares(resid, [dt, vc], loss="soft_l1", f_scale=0.05, diff_step=1e-3,
+                      x_scale=[scale, scale])
     return r.x[0], r.x[1], np.sqrt(np.median(r.fun ** 2)), len(P)
 
 
-def remove_text(X1, band_cov, geom, debug=None, verbose=True):
+def remove_text(X1, band_cov, geom, debug=None, verbose=True, scale=None):
+    scale = image_scale(X1.shape[:2]) if scale is None else scale
     phi, rL, rR = geom
     rc = (rL + rR) / 2
     hi, lo = load_template()
 
     # 1. грубое совмещение шаблона
-    dt, vc, peak = register_template(X1, lo, phi, rL, rR)
+    dt, vc, peak = register_template(X1, lo, phi, rL, rR, scale=scale)
+    if not np.isclose(scale, 1.0):
+        h, w = hi.shape[:2]
+        hi = cv2.resize(hi, (max(1, round(w * scale)), max(1, round(h * scale))),
+                        interpolation=cv2.INTER_LINEAR)
     m = template_matte(X1.shape[:2], hi, phi, rc, dt, vc)
 
     # 2. цвет и непрозрачность надписи: пары "внутри буквы / снаружи"
-    _, _, outer, inner = contour_samples(X1, m, band_cov, None, None)
+    _, _, outer, inner = contour_samples(X1, m, band_cov, None, None, scale)
     k, s, keep = fit_overlay(inner, outer, s_prior=0.5)
 
     # 3. субпиксельное совмещение, затем ещё раз уточняем цвет
-    dt, vc, rms, npts = refine_registration(X1, hi, phi, rc, dt, vc, m, band_cov, k, s)
+    dt, vc, rms, npts = refine_registration(X1, hi, phi, rc, dt, vc, m, band_cov, k, s, scale)
     m = template_matte(X1.shape[:2], hi, phi, rc, dt, vc)
-    _, _, outer, inner = contour_samples(X1, m, band_cov, None, None)
+    _, _, outer, inner = contour_samples(X1, m, band_cov, None, None, scale)
     k, s, keep = fit_overlay(inner, outer, s_prior=0.5)
     beta = 1 - s
     if verbose:
@@ -571,13 +625,14 @@ def remove_text(X1, band_cov, geom, debug=None, verbose=True):
     #    восстановленный цвет совпадает с кем-то из надёжных соседей
     #    (внутренность букв и пиксели вне надписи). Значение из шаблона
     #    служит слабой подсказкой.
-    k3 = np.ones((3, 3), np.uint8)
+    edge_radius = max(1, int(np.ceil(scale)))
+    k3 = np.ones((2 * edge_radius + 1, 2 * edge_radius + 1), np.uint8)
     edge = ((m > 0.01) & (m < 0.99)).astype(np.uint8)
     edge = cv2.dilate(edge, k3).astype(bool) & (band_cov > 0.999)
     reliable = ~edge
     ms = np.linspace(0, 1, 101)
     t6 = tol(6)
-    r = 3
+    r = max(1, int(np.ceil(3 * scale)))
     h, w = edge.shape
     for y, x in zip(*np.nonzero(edge)):
         y0, y1, x0, x1 = max(0, y - r), min(h, y + r + 1), max(0, x - r), min(w, x + r + 1)
@@ -614,12 +669,7 @@ def main():
     X, has_alpha, dtype = load_image(args.input)
     debug = Path(args.output).resolve().parent if args.debug else None
 
-    X1, cov, geom = remove_band(X)
-    if debug is not None:
-        cv2.imwrite(str(debug / "debug_band_cov.png"), np.round(cov * 255).astype(np.uint8))
-        cv2.imwrite(str(debug / "debug_no_band.png"), to_display(X1))
-
-    result = remove_text(X1, cov, geom, debug)
+    result = remove_image(X, debug)
     save_image(args.output, result, has_alpha, dtype)
     print(f"готово: {args.output}")
 

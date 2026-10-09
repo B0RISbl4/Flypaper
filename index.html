@@ -3,35 +3,282 @@
 <style>
   html, body { margin: 0; height: 100%; background: #0c1018; overflow: hidden;
                font-family: "Segoe UI", sans-serif; color: #ebeef5; }
+  #sky, #water { position: absolute; left: 0; right: 0; }
+  #sky { top: 0; bottom: 0; }
+  #water { bottom: 0; height: 22vh; }
+  #stars { position: absolute; inset: 0 0 22vh; }
+  #stars i { position: absolute; width: 2px; height: 2px; border-radius: 50%; background: #fff; }
+  #sun, #moon { position: absolute; border-radius: 50%; transform: translate(-50%, -50%); }
+  #sun { width: 46px; height: 46px; }
+  #moon { width: 34px; height: 34px; background: #e8ecf5; box-shadow: 0 0 24px rgba(220,230,255,.5); }
+  .landscape { position: absolute; left: 50%; width: max(112vw, 1100px); height: auto;
+               overflow: visible; will-change: transform; }
+  #l0, #l1, #l2 { bottom: calc(22vh - 24px); }
+  #l3 { bottom: 0; }
   #card { position: absolute; left: 8vw; bottom: 12vh;
-          opacity: 1; transition: opacity 1.5s ease; }
+          display: flex; align-items: center; gap: 3vw;
+          z-index: 2; opacity: 1; transition: opacity 1.5s ease; }
+  #aircraft-panel { position: absolute; z-index: 3; top: 3vh; right: 3vw;
+                    box-sizing: border-box; width: min(24vw, 360px); max-height: 46vh; overflow: auto;
+                    padding: 1.5vh 1.2vw; border: 1px solid rgba(210,225,255,.18);
+                    border-radius: 12px; background: rgba(8,13,23,.76);
+                    box-shadow: 0 12px 40px rgba(0,0,0,.24); backdrop-filter: blur(12px); }
+  #aircraft-panel[hidden] { display: none; }
+  #aircraft-panel h2 { margin: 0 0 .8vh; font-size: clamp(16px, 2vh, 24px); overflow-wrap: anywhere; }
+  #aircraft-illustration { display: block; width: 100%; height: 13vh; margin-bottom: .8vh;
+                           filter: invert(1); object-fit: contain; }
+  #aircraft-specs { display: grid; grid-template-columns: 1fr auto; gap: .5vh 1vw;
+                    font-size: clamp(11px, 1.45vh, 16px); }
+  #aircraft-specs dt { color: #aab5c8; }
+  #aircraft-specs dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
+  @media (max-width: 700px) {
+    #aircraft-panel { top: 2vh; right: 2vw; width: min(48vw, 300px); padding: 1vh 2vw; }
+    #aircraft-illustration { height: 10vh; }
+    #aircraft-specs { font-size: 10px; }
+  }
   #card.hidden { opacity: 0; }
+  #details { min-width: 0; }
+  #tail { width: 58vw; height: 48vh; object-fit: contain; }
+  #tail[hidden] { display: none; }
   #call { font-size: 14vh; line-height: 1; }
   #route { font-size: 6vh; margin-top: 2vh; }
   #meta { font-size: 3.4vh; margin-top: 1.5vh; color: #828c9e; }
   .empty #call { font-size: 9vh; color: #828c9e; }
 </style>
+<div id="sky"><div id="stars"></div><div id="sun"></div><div id="moon"></div></div>
+<svg class="landscape" id="l0" viewBox="0 0 2000 500"></svg>
+<svg class="landscape" id="l1" viewBox="0 0 2000 500"></svg>
+<svg class="landscape" id="l2" viewBox="0 0 2000 500"></svg>
+<div id="water"></div>
+<svg class="landscape" id="l3" viewBox="0 0 2000 500"></svg>
 <div id="card" class="hidden">
-  <div id="call"></div><div id="route"></div><div id="meta"></div>
+  <div id="details">
+    <div id="call"></div><div id="route"></div><div id="meta"></div>
+  </div>
+  <img id="tail" alt="Самолёт с ливреей авиакомпании" hidden>
 </div>
+<aside id="aircraft-panel" hidden aria-live="polite">
+  <h2 id="aircraft-model"></h2>
+  <img id="aircraft-illustration" src="/aircraft.svg" alt="Схема Boeing 737-800">
+  <dl id="aircraft-specs">
+    <dt>Год постройки</dt><dd id="aircraft-year"></dd>
+    <dt>Серийный номер</dt><dd id="aircraft-serial"></dd>
+    <dt>Регистрация</dt><dd id="aircraft-registration"></dd>
+    <dt>Страна регистрации</dt><dd id="aircraft-country"></dd>
+    <dt>Возраст по данным API</dt><dd id="aircraft-age"></dd>
+  </dl>
+</aside>
+<script src="https://cdn.jsdelivr.net/npm/suncalc@1.9.0/suncalc.js"></script>
+<script>
+(() => {
+  const LAT = 59.9343, LON = 30.3351;
+  const VIEW = 285, FOV = 110, HOR = .78;
+  const $ = id => document.getElementById(id);
+  const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+  const hex = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+  const mix = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
+  const rgba = (c, a = 1) => `rgba(${c.map(Math.round)},${a})`;
+  let warnedAboutSunCalc = false;
+  const colors = [
+    [-18, "#04060d", "#0a1024"], [-8, "#0d1733", "#2a2f5a"],
+    [-3, "#25356b", "#c76a6a"], [2, "#4a6aa8", "#f0a070"],
+    [10, "#5a8fd0", "#f5d2a8"], [30, "#3f86d6", "#bcdcf5"]
+  ].map(([alt, top, horizon]) => [alt, hex(top), hex(horizon)]);
+
+  function skyAt(alt) {
+    if (alt <= colors[0][0]) return [colors[0][1], colors[0][2]];
+    for (let i = 1; i < colors.length; i++) {
+      if (alt <= colors[i][0]) {
+        const t = (alt - colors[i - 1][0]) / (colors[i][0] - colors[i - 1][0]);
+        return [mix(colors[i - 1][1], colors[i][1], t), mix(colors[i - 1][2], colors[i][2], t)];
+      }
+    }
+    const last = colors[colors.length - 1];
+    return [last[1], last[2]];
+  }
+
+  function skyline(seed, minHeight, maxHeight, minWidth, maxWidth, start = 0, end = 2000) {
+    const random = () => (seed = seed * 16807 % 2147483647) / 2147483647;
+    let x = start, path = `M${start} 500`;
+    while (x < end) {
+      const width = minWidth + random() * (maxWidth - minWidth);
+      path += `V${500 - minHeight - random() * (maxHeight - minHeight)}H${x += width}`;
+    }
+    return `${path}V500Z`;
+  }
+
+  let windows = "", lamps = "", glow = "";
+  for (let x = 448; x < 760; x += 26) {
+    for (const y of [436, 460]) windows += `<rect x="${x}" y="${y}" width="9" height="14"/>`;
+  }
+  for (let x = 120; x < 2000; x += 300) {
+    lamps += `<rect x="${x}" y="355" width="5" height="100"/><circle cx="${x + 2.5}" cy="348" r="9"/>`;
+    glow += `<circle cx="${x + 2.5}" cy="348" r="38" fill="#ffb860" opacity=".28"/><circle cx="${x + 2.5}" cy="348" r="7" fill="#ffe2a8"/>`;
+  }
+
+  $("l0").innerHTML = `<path d="${skyline(7, 14, 46, 30, 80)}"/><path d="M1720 500L1738 190L1752 30L1766 190L1784 500Z"/>`;
+  $("l1").innerHTML = `<path d="${skyline(3, 16, 36, 25, 60)}"/><rect x="880" y="448" width="640" height="52"/><rect x="1130" y="408" width="140" height="42"/><path d="M1184 410V332L1196 300L1198 150L1200 40L1202 150L1204 300L1216 332V410Z"/>`;
+  $("l2").innerHTML = `<path d="${skyline(21, 26, 58, 40, 90, 0, 980)}"/><rect x="430" y="412" width="340" height="88"/><path d="M505 414L600 372L695 414Z"/><g id="rostral"><rect x="372" y="345" width="20" height="155"/><rect x="365" y="336" width="34" height="12"/><path d="M372 336L382 312L392 336Z"/></g><use href="#rostral" x="436"/><g id="windows" fill="#ffcf7a" opacity="0">${windows}</g>`;
+  $("l3").innerHTML = `<rect y="452" width="2000" height="120"/><rect y="444" width="2000" height="10"/>${lamps}<g id="lamp-glow" opacity="0">${glow}</g>`;
+  $("stars").innerHTML = Array.from({ length: 90 }, () =>
+    `<i style="left:${Math.random() * 100}%;top:${Math.random() * 100}%;opacity:${.3 + Math.random() * .7}"></i>`
+  ).join("");
+
+  const haze = [.7, .45, .2];
+  function toXY(az, alt) {
+    const dx = ((az - VIEW + 540) % 360) - 180;
+    return [50 + dx / FOV * 100, innerHeight * HOR * (1 - alt / 60)];
+  }
+
+  function solarPosition(date) {
+    const jd = date.getTime() / 86400000 + 2440587.5;
+    const century = (jd - 2451545) / 36525;
+    const meanLongitude = ((280.46646 + century * (36000.76983 + century * .0003032)) % 360 + 360) % 360;
+    const meanAnomaly = (357.52911 + century * (35999.05029 - .0001537 * century)) * Math.PI / 180;
+    const eccentricity = .016708634 - century * (.000042037 + .0000001267 * century);
+    const center = Math.sin(meanAnomaly) * (1.914602 - century * (.004817 + .000014 * century)) +
+      Math.sin(2 * meanAnomaly) * (.019993 - .000101 * century) +
+      Math.sin(3 * meanAnomaly) * .000289;
+    const omega = (125.04 - 1934.136 * century) * Math.PI / 180;
+    const longitude = (meanLongitude + center - .00569 - .00478 * Math.sin(omega)) * Math.PI / 180;
+    const obliquity = (23 + (26 + (21.448 - century * (46.815 + century * (.00059 - century * .001813))) / 60) / 60 +
+      .00256 * Math.cos(omega)) * Math.PI / 180;
+    const declination = Math.asin(Math.sin(obliquity) * Math.sin(longitude));
+    const rightAscension = Math.atan2(Math.cos(obliquity) * Math.sin(longitude), Math.cos(longitude));
+    const gmst = (280.46061837 + 360.98564736629 * (jd - 2451545) +
+      .000387933 * century * century - century * century * century / 38710000) * Math.PI / 180;
+    const hourAngle = ((gmst + LON * Math.PI / 180 - rightAscension + Math.PI) % (2 * Math.PI) + 2 * Math.PI) %
+      (2 * Math.PI) - Math.PI;
+    const latitude = LAT * Math.PI / 180;
+    const altitude = Math.asin(Math.sin(latitude) * Math.sin(declination) +
+      Math.cos(latitude) * Math.cos(declination) * Math.cos(hourAngle));
+    const azimuth = (Math.atan2(Math.sin(hourAngle),
+      Math.cos(hourAngle) * Math.sin(latitude) - Math.tan(declination) * Math.cos(latitude)) * 180 / Math.PI + 180) % 360;
+    return { altitude: altitude * 180 / Math.PI, azimuth };
+  }
+
+  function render(date) {
+    if (!window.SunCalc && !warnedAboutSunCalc) {
+      console.warn("SunCalc did not load; moon rendering is unavailable, using calculated solar position.");
+      warnedAboutSunCalc = true;
+    }
+    const position = window.SunCalc
+      ? SunCalc.getPosition(date, LAT, LON)
+      : solarPosition(date);
+    const alt = window.SunCalc ? position.altitude * 180 / Math.PI : position.altitude;
+    const az = window.SunCalc ? (position.azimuth * 180 / Math.PI + 180) % 360 : position.azimuth;
+    const [top, horizon] = skyAt(alt);
+    const [sunX, sunY] = toXY(az, alt);
+    const glow = clamp(1 - Math.abs(alt - 2) / 14);
+    $("sky").style.background =
+      `radial-gradient(ellipse 70% 55% at ${clamp(sunX, -20, 120)}% ${sunY}px,rgba(255,140,60,${glow * .7}),transparent 70%),` +
+      `linear-gradient(${rgba(top)} 0%,${rgba(horizon)} ${HOR * 100}%,${rgba(horizon)} 100%)`;
+    const sunColor = mix([255, 110, 40], [255, 250, 225], clamp(alt / 14));
+    $("sun").style.cssText = `left:${sunX}%;top:${sunY}px;background:${rgba(sunColor)};box-shadow:0 0 ${50 + glow * 60}px ${12 + glow * 20}px ${rgba(sunColor, .55)};display:${alt > -1.5 && sunX > -5 && sunX < 105 ? "block" : "none"}`;
+    if (window.SunCalc) {
+      const moonPosition = SunCalc.getMoonPosition(date, LAT, LON);
+      const moonAlt = moonPosition.altitude * 180 / Math.PI;
+      const moonAz = (moonPosition.azimuth * 180 / Math.PI + 180) % 360;
+      const moonIllumination = SunCalc.getMoonIllumination(date).fraction;
+      const [moonX, moonY] = toXY(moonAz, moonAlt);
+      $("moon").style.cssText = `left:${moonX}%;top:${moonY}px;opacity:${(.25 + .75 * moonIllumination) * clamp((8 - alt) / 12)};display:${moonAlt > -1.5 && moonX > -5 && moonX < 105 ? "block" : "none"}`;
+    } else {
+      $("moon").style.display = "none";
+    }
+    $("stars").style.opacity = clamp((-alt - 6) / 8);
+    const darkness = clamp((2 - alt) / 8);
+    const ink = mix(hex("#05070d"), hex("#46566f"), clamp((alt + 4) / 25));
+    ["l0", "l1", "l2"].forEach((id, i) => { $(id).style.fill = rgba(mix(ink, horizon, haze[i])); });
+    $("l3").style.fill = rgba(mix(ink, [0, 0, 0], .3));
+    $("windows").style.opacity = darkness;
+    $("lamp-glow").style.opacity = darkness;
+    const streak = clamp((alt + 1) / 8) * .7;
+    const inView = sunX > 0 && sunX < 100;
+    $("water").style.background =
+      (inView ? `radial-gradient(ellipse 5% 100% at ${sunX}% 0,${rgba(sunColor, streak)},transparent),` : "") +
+      `linear-gradient(${rgba(mix(horizon, top, .25))},${rgba(mix(top, [0, 0, 0], .5))})`;
+  }
+
+  const layers = ["l0", "l1", "l2", "l3"].map($);
+  const depth = [5, 12, 24, 46];
+  let targetX = 0, targetY = 0, currentX = 0, currentY = 0;
+  addEventListener("pointermove", event => {
+    targetX = event.clientX / innerWidth * 2 - 1;
+    targetY = event.clientY / innerHeight * 2 - 1;
+  });
+  addEventListener("deviceorientation", event => {
+    if (event.gamma != null) {
+      targetX = clamp(event.gamma / 30, -1, 1);
+      targetY = clamp((event.beta - 45) / 30, -1, 1);
+    }
+  });
+  addEventListener("resize", () => render(new Date()));
+  (function animate() {
+    currentX += (targetX - currentX) * .07;
+    currentY += (targetY - currentY) * .07;
+    layers.forEach((layer, i) => {
+      layer.style.transform = `translate3d(calc(-50% + ${-currentX * depth[i]}px),${-currentY * depth[i] * .4}px,0)`;
+    });
+    requestAnimationFrame(animate);
+  })();
+
+  function updateFromCurrentTime() {
+    render(new Date());
+  }
+  updateFromCurrentTime();
+  setInterval(updateFromCurrentTime, 1000);
+})();
+</script>
 <script>
   const card = document.getElementById("card");
+  const tail = document.getElementById("tail");
+  const aircraftPanel = document.getElementById("aircraft-panel");
   let current;   // undefined до первого ответа
+  let currentTailCode = null;
+  let tailFailed = false;
+
+  tail.onload = () => { tailFailed = false; tail.hidden = false; };
+  tail.onerror = () => { tailFailed = true; tail.hidden = true; };
+
+  function showAircraftProfile(a) {
+    aircraftPanel.hidden = !a;
+    if (!a) return;
+    document.getElementById("aircraft-model").textContent = a.model_name || "N/A";
+    document.getElementById("aircraft-year").textContent = a.year_built || "N/A";
+    document.getElementById("aircraft-serial").textContent = a.serial_number || "N/A";
+    document.getElementById("aircraft-registration").textContent = a.registration || "N/A";
+    document.getElementById("aircraft-country").textContent = a.registration_country || "N/A";
+    document.getElementById("aircraft-age").textContent = a.aircraft_age || "НN/A";
+  }
 
   function show(a) {
     card.classList.toggle("empty", !a);
+    showAircraftProfile(a);
     call.textContent = a ? (a.callsign || "—") : "Clear sky";
     route.textContent = a ? `${a.type}   ${a.origin || "—"} → ${a.dest || "—"}` : "";
     meta.textContent = a
       ? `${Math.round(a.alt_m)} m   ${Math.round(a.speed_kt)} kt   ` +
         `${(a.dist_m / 1000).toFixed(1)} km   az ${Math.round(a.bearing)}°   el ${Math.round(a.elevation)}°`
       : "";
+
+    const code = a && typeof a.airline_iata === "string" &&
+      /^[A-Z0-9]{2}$/i.test(a.airline_iata)
+      ? a.airline_iata.toUpperCase()
+      : null;
+    if (code !== currentTailCode) {
+      currentTailCode = code;
+      tailFailed = false;
+      if (code) tail.src = `/plane/${code}.png`;
+    }
+    tail.hidden = !code || tailFailed;
   }
 
   async function tick() {
     try {
       const { aircraft } = await (await fetch("/api")).json();
-      const key = aircraft ? aircraft.callsign : null;
+      const key = aircraft
+        ? `${aircraft.callsign}:${aircraft.airline_iata || ""}`
+        : null;
       if (key !== current) {
         card.classList.add("hidden");
         setTimeout(() => { show(aircraft); card.classList.remove("hidden"); }, current === undefined ? 0 : 1500);

@@ -1,6 +1,7 @@
 input.png
 output.png
 airtime.csv
+tail-cache/
 .idea/
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -4,7 +4,7 @@ import time
 from pathlib import Path
 
 from FlightRadarAPI import FlightRadar24API
-from flights import fetch_nearby
+from flights import fetch_nearby, is_rate_limited, poll_delay
 
 OUT = Path(__file__).parent / "airtime.csv"
 INTERVAL_S = 60
@@ -43,15 +43,28 @@ if __name__ == "__main__":
     api = FlightRadar24API()
     names = load_names(api)
     totals = load()   # продолжает копить после перезапуска
+    rate_limit_streak = 0
     while True:
+        error = None
         try:
             nearby = fetch_nearby(api)
         except Exception as e:
+            error = e
+            if is_rate_limited(error):
+                rate_limit_streak += 1
+            else:
+                rate_limit_streak = 0
             print(time.strftime("%H:%M:%S"), "poll failed:", e)
         else:
+            rate_limit_streak = 0
             for a in nearby:
                 key = (airline_of(a), a.type or "?")
                 totals[key] = totals.get(key, 0) + INTERVAL_S / 60
             if nearby:
                 save(totals, names)
-        time.sleep(INTERVAL_S - time.time() % INTERVAL_S)
+        if is_rate_limited(error):
+            delay = poll_delay(error, rate_limit_streak, INTERVAL_S)
+            print(f"rate limited; retrying in {delay:g} seconds")
+        else:
+            delay = INTERVAL_S - time.time() % INTERVAL_S
+        time.sleep(delay)
