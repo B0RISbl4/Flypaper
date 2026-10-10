@@ -69,8 +69,17 @@ def bg_color(rgb, inside):
     return px[key == k].mean(0)
 
 
-def apply_livery(plane, livery, fin_poly, lead, plane_faces="left", livery_faces="right"):
+# Бумажный тон постера: «белое» на киле становится кремовым, как на концепте
+PAPER = np.float32([203, 232, 245]) / 255   # BGR
+
+
+def apply_livery(plane, livery, fin_poly, lead=None, plane_faces="left", livery_faces="right",
+                 fin_quad=None):
     """
+    Если задан fin_quad (углы киля шаблона TL, TR, BR, BL — продлённые до пересечения сторон),
+    ливрея сажается по четырём углам (перспектива), как наклейка на киль в ракурсе снизу.
+    Иначе — старый режим по lead (см. ниже).
+
     Жёсткая посадка ливреи: поворот + равномерный масштаб + сдвиг (никакого перекоса/перспективы).
     Передняя кромка ливреи совмещается с передней кромкой киля, остальное — «окно» киля.
 
@@ -80,12 +89,17 @@ def apply_livery(plane, livery, fin_poly, lead, plane_faces="left", livery_faces
     Если стороны не совпадают, самолёт разворачивается носом в сторону ливреи (текст не зеркалится).
     """
     fin_poly = np.float32(fin_poly)
-    lead = np.float32(lead)
+    lead = None if lead is None else np.float32(lead)
+    fin_quad = None if fin_quad is None else np.float32(fin_quad)
     if plane_faces != livery_faces:
         W0 = plane.shape[1]
         plane = np.ascontiguousarray(plane[:, ::-1])
         fin_poly[:, 0] = W0 - 1 - fin_poly[:, 0]
-        lead[:, 0] = W0 - 1 - lead[:, 0]
+        if lead is not None:
+            lead[:, 0] = W0 - 1 - lead[:, 0]
+        if fin_quad is not None:
+            fin_quad[:, 0] = W0 - 1 - fin_quad[:, 0]
+            fin_quad = fin_quad[[1, 0, 3, 2]]       # после зеркала TL<->TR, BL<->BR
     H, W = plane.shape[:2]
 
     # 1. ливрея: убираем её контур, фон достраиваем доминирующим цветом
@@ -98,17 +112,26 @@ def apply_livery(plane, livery, fin_poly, lead, plane_faces="left", livery_faces
     al = cv2.GaussianBlur(inner.astype(np.float32), (0, 0), 1.0)[..., None]
     field = rgb * al + col * (1 - al)
 
-    # 2. подобие по двум точкам передней кромки
-    s = np.linalg.norm(lead[1] - lead[0]) / np.linalg.norm(p2 - p1)
-    if s < 1:                                   # сначала уменьшаем нормально (INTER_AREA)
-        field = cv2.resize(field, None, fx=s, fy=s, interpolation=cv2.INTER_AREA)
-        p1, p2 = p1 * s, p2 * s
-    c = lambda p: complex(*p)
-    r = (c(lead[1]) - c(lead[0])) / (c(p2) - c(p1))
-    t = c(lead[0]) - r * c(p1)
-    M = np.float32([[r.real, -r.imag, t.real], [r.imag, r.real, t.imag]])
-    warped = cv2.warpAffine(field, M, (W, H), flags=cv2.INTER_CUBIC,
-                            borderMode=cv2.BORDER_CONSTANT, borderValue=tuple(map(float, col)))
+    # 2. посадка на киль
+    if fin_quad is not None:                    # перспектива по 4 углам
+        s = np.linalg.norm(fin_quad[1] - fin_quad[2]) / np.linalg.norm(quad[1] - quad[2])
+        if s < 1:
+            field = cv2.resize(field, None, fx=s, fy=s, interpolation=cv2.INTER_AREA)
+            quad = quad * s
+        M = cv2.getPerspectiveTransform(quad, fin_quad)
+        warped = cv2.warpPerspective(field, M, (W, H), flags=cv2.INTER_CUBIC,
+                                     borderMode=cv2.BORDER_CONSTANT, borderValue=tuple(map(float, col)))
+    else:                                       # подобие по двум точкам передней кромки
+        s = np.linalg.norm(lead[1] - lead[0]) / np.linalg.norm(p2 - p1)
+        if s < 1:                               # сначала уменьшаем нормально (INTER_AREA)
+            field = cv2.resize(field, None, fx=s, fy=s, interpolation=cv2.INTER_AREA)
+            p1, p2 = p1 * s, p2 * s
+        c = lambda p: complex(*p)
+        r = (c(lead[1]) - c(lead[0])) / (c(p2) - c(p1))
+        t = c(lead[0]) - r * c(p1)
+        M = np.float32([[r.real, -r.imag, t.real], [r.imag, r.real, t.imag]])
+        warped = cv2.warpAffine(field, M, (W, H), flags=cv2.INTER_CUBIC,
+                                borderMode=cv2.BORDER_CONSTANT, borderValue=tuple(map(float, col)))
 
     # 3. маска: силуэт самолёта ∩ полигон киля
     poly = np.zeros((H, W), np.uint8)
@@ -121,12 +144,20 @@ def apply_livery(plane, livery, fin_poly, lead, plane_faces="left", livery_faces
     shade = np.clip(gray / base, 0, 1)[..., None]
 
     out = plane.copy()
-    out[..., :3] = np.clip(plane[..., :3] * (1 - m) + np.clip(warped, 0, 255) * shade * m, 0, 255).astype(np.uint8)
+    out[..., :3] = np.clip(plane[..., :3] * (1 - m) + np.clip(warped, 0, 255) * PAPER * shade * m, 0, 255).astype(np.uint8)
     return out
 
 
-# Конфиги самолётов (координаты в исходной ориентации картинки)
+# Конфиги самолётов (координаты в пикселях шаблона)
 PLANES = {
+    # хвост «снизу-сзади», как на концепте. template_tail.png — RGBA, фон прозрачный.
+    # fin_quad: TL, TR, BR, BL киля (углы продлены до пересечения прямых сторон)
+    "tail": dict(
+        template="template_tail.png",
+        # основание киля — линия стыка с фюзеляжем (356,466) -> (755,367)
+        fin_poly=[(224, 26), (392, -4), (763, 365), (354, 466)],
+        fin_quad=[(233, 36), (390, 7), (755, 367), (356, 466)],
+        faces="right"),
     "b738": dict(
         fin_poly=[(1816, 36), (1912, 36), (1812, 405), (1385, 390)],
         lead=[(1829, 45), (1532, 397)],
@@ -142,7 +173,9 @@ def imread(path):
 
 
 def imwrite(path, img):
-    cv2.imencode(Path(path).suffix or ".png", img)[1].tofile(str(path))
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    cv2.imencode(path.suffix or ".png", img)[1].tofile(str(path))
 
 
 def main():
@@ -150,8 +183,8 @@ def main():
     ap = argparse.ArgumentParser(description="Накладывает ливрею на хвост самолёта-шаблона")
     ap.add_argument("livery", help="картинка ливреи, например SU.png (путь или имя файла рядом со скриптом)")
     ap.add_argument("-o", "--out", help="куда сохранить (по умолчанию <ливрея>_out.png рядом со скриптом)")
-    ap.add_argument("-t", "--template", default="template.png", help="шаблон самолёта (по умолчанию template.png рядом со скриптом)")
-    ap.add_argument("-p", "--plane", default="b738", choices=PLANES, help="конфиг самолёта из PLANES")
+    ap.add_argument("-t", "--template", help="шаблон (по умолчанию из конфига PLANES, рядом со скриптом)")
+    ap.add_argument("-p", "--plane", default="tail", choices=PLANES, help="конфиг из PLANES")
     ap.add_argument("--livery-faces", default="right", choices=["left", "right"],
                     help="в какую сторону смотрит нос на картинке ливреи")
     a = ap.parse_args()
@@ -160,14 +193,14 @@ def main():
         p = Path(p)
         return p if p.exists() else here / p
 
-    livery_path, tpl_path = find(a.livery), find(a.template)
+    cfg = PLANES[a.plane]
+    livery_path, tpl_path = find(a.livery), find(a.template or cfg.get("template", "template.png"))
     for p in (livery_path, tpl_path):
         if not p.exists():
             sys.exit(f"Файл не найден: {p}")
 
-    cfg = PLANES[a.plane]
-    out = apply_livery(imread(tpl_path), imread(livery_path), cfg["fin_poly"], cfg["lead"],
-                       cfg["faces"], a.livery_faces)
+    out = apply_livery(imread(tpl_path), imread(livery_path), cfg["fin_poly"], cfg.get("lead"),
+                       cfg["faces"], a.livery_faces, cfg.get("fin_quad"))
     out_path = Path(a.out) if a.out else here / f"{livery_path.stem}_out.png"
     imwrite(out_path, out)
     print("Готово:", out_path)

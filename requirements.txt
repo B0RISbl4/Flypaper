@@ -1,0 +1,5 @@
+FlightRadarAPI
+curl-cffi
+flydenity==0.1.6
+numpy
+opencv-python

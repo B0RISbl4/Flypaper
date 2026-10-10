@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 
 from FlightRadarAPI import FlightRadar24API
+from flydenity import Parser
 
 LAT, LON = 59.938744, 30.314166   # твои координаты
 RADIUS_M = 75_000
@@ -13,6 +14,7 @@ MAX_RATE_LIMIT_BACKOFF_S = 15 * 60
 
 R_EARTH = 6_371_000.0
 FT = 0.3048
+REGISTRATION_PARSER = Parser()
 COUNTRY_NAMES_BY_FR24_ID = {
     46: "Китай",
     228: "Турция",
@@ -50,15 +52,19 @@ class Aircraft:
     airline_iata: str
     origin: str
     dest: str
+    origin_city: str
+    dest_city: str
     model_name: str
     year_built: str
     serial_number: str
     registration_country: str
+    registration_country_iso2: str
     aircraft_age: str
     alt_m: float
     speed_kt: float
     dist_m: float
     bearing: float
+    heading: float | None
     elevation: float  # угол над горизонтом, градусы
 
 
@@ -107,23 +113,36 @@ def bearing(lat1, lon1, lat2, lon2):
     return (math.degrees(math.atan2(y, x)) + 360) % 360
 
 
-def registration_country(country_id, registration: str) -> str:
+def registration_country(country_id, registration: str) -> tuple[str, str]:
+    try:
+        parsed = REGISTRATION_PARSER.parse(registration.strip().upper()) if registration else None
+    except (TypeError, ValueError):
+        parsed = None
+    if isinstance(parsed, dict):
+        name = str(parsed.get("nation") or "").strip()
+        iso2 = str(parsed.get("iso2") or "").strip().upper()
+        if len(iso2) != 2 or not iso2.isascii() or not iso2.isalpha():
+            iso2 = ""
+        if name or iso2:
+            return name, iso2
+
     country_id_text = str(country_id or "").strip()
     try:
         numeric_id = int(float(country_id_text))
     except (TypeError, ValueError, OverflowError):
         numeric_id = None
     if numeric_id in COUNTRY_NAMES_BY_FR24_ID:
-        return COUNTRY_NAMES_BY_FR24_ID[numeric_id]
+        iso2 = {46: "CN", 228: "TR"}.get(numeric_id, "")
+        return COUNTRY_NAMES_BY_FR24_ID[numeric_id], iso2
 
     normalized_registration = registration.upper()
     for prefix, country_name in COUNTRY_PREFIXES:
         if normalized_registration.startswith(prefix):
-            return country_name
+            return country_name, ""
 
     if country_id_text:
-        return f"Неизвестная страна (код: {country_id_text})"
-    return ""
+        return f"Неизвестная страна (код: {country_id_text})", ""
+    return "", ""
 
 
 def aircraft_profile(api: FlightRadar24API, flight) -> dict[str, str]:
@@ -131,6 +150,8 @@ def aircraft_profile(api: FlightRadar24API, flight) -> dict[str, str]:
     flight.set_flight_details(details)
     raw_aircraft = details.get("aircraft")
     raw_aircraft = raw_aircraft if isinstance(raw_aircraft, dict) else {}
+    airports = details.get("airport")
+    airports = airports if isinstance(airports, dict) else {}
 
     def text(value) -> str:
         if value is None or value == "N/A":
@@ -144,21 +165,38 @@ def aircraft_profile(api: FlightRadar24API, flight) -> dict[str, str]:
                 return value
         return ""
 
-    country = registration_country(
+    def airport_city(direction: str) -> str:
+        airport = airports.get(direction)
+        airport = airport if isinstance(airport, dict) else {}
+        position = airport.get("position")
+        position = position if isinstance(position, dict) else {}
+        region = position.get("region")
+        region = region if isinstance(region, dict) else {}
+        city = region.get("city") or position.get("city") or airport.get("city")
+        if isinstance(city, dict):
+            city = city.get("name") or city.get("text")
+        return text(city)
+
+    country, country_iso2 = registration_country(
         getattr(flight, "aircraft_country_id", ""),
         text(getattr(flight, "registration", "")),
     )
     return {
+        "origin_city": airport_city("origin"),
+        "dest_city": airport_city("destination"),
         "model_name": text(getattr(flight, "aircraft_model", "")),
         "year_built": field("yearBuilt", "year_built", "builtYear", "built_year"),
         "serial_number": field("serialNumber", "serial_number", "serial", "msn"),
         "registration_country": country,
+        "registration_country_iso2": country_iso2,
         "aircraft_age": str(getattr(flight, "aircraft_age", "") or ""),
     }
 
 
 def fetch_nearby(
-    api: FlightRadar24API, detailed_registration: str | None = None
+    api: FlightRadar24API,
+    detailed_registration: str | None = None,
+    detailed_route: tuple[str, str] | None = None,
 ) -> list[Aircraft]:
     bounds = api.get_bounds_by_point(LAT, LON, RADIUS_M)
     result = []
@@ -167,6 +205,9 @@ def fetch_nearby(
             continue
         d = haversine(LAT, LON, f.latitude, f.longitude)
         alt = f.altitude * FT
+        heading = f.heading
+        if not isinstance(heading, (int, float)) or not math.isfinite(heading):
+            heading = None
         aircraft = Aircraft(
             callsign=f.callsign or f.registration,
             type=f.aircraft_code,
@@ -175,15 +216,19 @@ def fetch_nearby(
             airline_iata=f.airline_iata,
             origin=f.origin_airport_iata,
             dest=f.destination_airport_iata,
+            origin_city="",
+            dest_city="",
             model_name="",
             year_built="",
             serial_number="",
             registration_country="",
+            registration_country_iso2="",
             aircraft_age="",
             alt_m=alt,
             speed_kt=f.ground_speed,
             dist_m=d,
             bearing=bearing(LAT, LON, f.latitude, f.longitude),
+            heading=heading,
             elevation=math.degrees(math.atan2(alt, d)),
         )
         result.append((aircraft, f))
@@ -191,7 +236,8 @@ def fetch_nearby(
     result.sort(key=lambda item: item[0].dist_m)
     if result:
         selected, flight = result[0]
-        if selected.registration and selected.registration != detailed_registration:
+        route_changed = detailed_route is not None and (selected.origin, selected.dest) != detailed_route
+        if selected.registration and (selected.registration != detailed_registration or route_changed):
             try:
                 profile = aircraft_profile(api, flight)
             except Exception as error:

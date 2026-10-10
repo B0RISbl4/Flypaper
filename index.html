@@ -1,88 +1,136 @@
 <!doctype html>
+<html lang="ru">
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=Barlow:ital,wght@1,800&display=swap">
 <style>
-  html, body { margin: 0; height: 100%; background: #0c1018; overflow: hidden;
-               font-family: "Segoe UI", sans-serif; color: #ebeef5; }
-  #sky, #water { position: absolute; left: 0; right: 0; }
-  #sky { top: 0; bottom: 0; }
-  #water { bottom: 0; height: 22vh; }
-  #stars { position: absolute; inset: 0 0 22vh; }
+  :root { --paper: #efe3c8; --ink: #f1e6cf; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--paper);
+               font-family: "Barlow Condensed", "Oswald", "Arial Narrow", "Segoe UI", sans-serif; color: var(--ink); }
+
+  /* рамка постера; всё, что выезжает при параллаксе, обрезается ею */
+  #poster { position: absolute; inset: .8vmin; overflow: hidden; background: #14437f;
+            --th: min(60vh, 37.5vw); }
+  #sky, #far { position: absolute; inset: 0; }
+  #stars { position: absolute; inset: 0; }
   #stars i { position: absolute; width: 2px; height: 2px; border-radius: 50%; background: #fff; }
   #sun, #moon { position: absolute; border-radius: 50%; transform: translate(-50%, -50%); }
-  #sun { width: 46px; height: 46px; }
-  #moon { width: 34px; height: 34px; background: #e8ecf5; box-shadow: 0 0 24px rgba(220,230,255,.5); }
-  .landscape { position: absolute; left: 50%; width: max(112vw, 1100px); height: auto;
-               overflow: visible; will-change: transform; }
-  #l0, #l1, #l2 { bottom: calc(22vh - 24px); }
-  #l3 { bottom: 0; }
-  #card { position: absolute; left: 8vw; bottom: 12vh;
-          display: flex; align-items: center; gap: 3vw;
-          z-index: 2; opacity: 1; transition: opacity 1.5s ease; }
-  #aircraft-panel { position: absolute; z-index: 3; top: 3vh; right: 3vw;
-                    box-sizing: border-box; width: min(24vw, 360px); max-height: 46vh; overflow: auto;
-                    padding: 1.5vh 1.2vw; border: 1px solid rgba(210,225,255,.18);
-                    border-radius: 12px; background: rgba(8,13,23,.76);
-                    box-shadow: 0 12px 40px rgba(0,0,0,.24); backdrop-filter: blur(12px); }
-  #aircraft-panel[hidden] { display: none; }
-  #aircraft-panel h2 { margin: 0 0 .8vh; font-size: clamp(16px, 2vh, 24px); overflow-wrap: anywhere; }
-  #aircraft-illustration { display: block; width: 100%; height: 13vh; margin-bottom: .8vh;
-                           filter: invert(1); object-fit: contain; }
-  #aircraft-specs { display: grid; grid-template-columns: 1fr auto; gap: .5vh 1vw;
-                    font-size: clamp(11px, 1.45vh, 16px); }
-  #aircraft-specs dt { color: #aab5c8; }
-  #aircraft-specs dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
-  @media (max-width: 700px) {
-    #aircraft-panel { top: 2vh; right: 2vw; width: min(48vw, 300px); padding: 1vh 2vw; }
-    #aircraft-illustration { height: 10vh; }
-    #aircraft-specs { font-size: 10px; }
-  }
-  #card.hidden { opacity: 0; }
-  #details { min-width: 0; }
-  #tail { width: 58vw; height: 48vh; object-fit: contain; }
+  #sun { width: 5.2vmin; height: 5.2vmin; }
+  #moon { width: 3.8vmin; height: 3.8vmin; background: #e8ecf5; box-shadow: 0 0 24px rgba(220,230,255,.5); }
+
+  .layer { position: absolute; will-change: transform; }
+  #planeSvg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  #planeSvg .plane { color: var(--plane); }
+  .clouds { left: -5%; bottom: -5%; width: 110%; height: 110%; }
+  .clouds { fill: var(--c); }
+  /* Компенсировать максимальный сдвиг хвоста: 44px по X и 17.6px по Y. */
+  #tail { right: -44px; bottom: -17.6px; height: var(--th); width: auto; }
   #tail[hidden] { display: none; }
-  #call { font-size: 14vh; line-height: 1; }
-  #route { font-size: 6vh; margin-top: 2vh; }
-  #meta { font-size: 3.4vh; margin-top: 1.5vh; color: #828c9e; }
-  .empty #call { font-size: 9vh; color: #828c9e; }
+
+  #grain { position: absolute; inset: 0; pointer-events: none; mix-blend-mode: overlay; opacity: .22;
+           background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='320'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 0 0 0 0 1'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+
+  .dyn { transition: opacity 1.5s ease; }
+  #poster.swap .dyn { opacity: 0; }
+
+  /* --- инфо-блок --- */
+  #info { position: absolute; z-index: 5; top: 4.2vh; left: 3vw; width: min(26vw, 430px);
+          text-shadow: 0 1px 8px rgba(4,14,40,.35); }
+  #airline { font: italic 800 clamp(24px, 5vh, 60px)/1 "Barlow", "Arial Black", sans-serif;
+             text-transform: uppercase; letter-spacing: .01em; white-space: nowrap; overflow: hidden; text-overflow: clip; }
+  #route { display: grid; grid-template-columns: 1fr auto 1fr; align-items: end; margin-top: 1.8vh; }
+  #route .code { font-size: clamp(30px, 6.6vh, 80px); font-weight: 700; line-height: 1; }
+  #route .city { font-size: clamp(11px, 1.9vh, 22px); letter-spacing: .08em; text-transform: uppercase; opacity: .85; margin-top: .4vh; min-height: 1.2em; }
+  #route .to { text-align: right; }
+  #route .arrow { font-size: clamp(18px, 3vh, 36px); padding: 0 1vw 2vh; opacity: .9; }
+  #info hr { border: 0; border-top: 1px solid rgba(241,230,207,.38); margin: 1.6vh 0; }
+  .specs { display: grid; grid-template-columns: 1.7em max-content 1fr; column-gap: .5em; row-gap: 1.1vh; align-items: center;
+           font-size: clamp(12px, 2vh, 25px); line-height: 1.05; }
+  .row { display: contents; }
+  .row .k { text-transform: uppercase; letter-spacing: .05em; opacity: .8; white-space: nowrap; }
+  .row .v { font-weight: 600; }
+  .row .v small { font-weight: 400; font-size: .85em; margin-left: .5em; opacity: .85; }
+  .flag { width: 1.25em; height: .9em; object-fit: cover; vertical-align: -.08em; }
+  .ic { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .ic.f { fill: currentColor; stroke: none; }
+  #clear { display: none; font-size: clamp(22px, 4.4vh, 52px); font-weight: 600; letter-spacing: .1em; text-transform: uppercase; opacity: .9; }
+  #poster.empty #clear { display: block; }
+  #poster.empty .data { display: none; }
+  @media (max-width: 700px) { #info { width: 48vw; } }
 </style>
-<div id="sky"><div id="stars"></div><div id="sun"></div><div id="moon"></div></div>
-<svg class="landscape" id="l0" viewBox="0 0 2000 500"></svg>
-<svg class="landscape" id="l1" viewBox="0 0 2000 500"></svg>
-<svg class="landscape" id="l2" viewBox="0 0 2000 500"></svg>
-<div id="water"></div>
-<svg class="landscape" id="l3" viewBox="0 0 2000 500"></svg>
-<div id="card" class="hidden">
-  <div id="details">
-    <div id="call"></div><div id="route"></div><div id="meta"></div>
-  </div>
-  <img id="tail" alt="Самолёт с ливреей авиакомпании" hidden>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-plane" viewBox="0 0 24 24"><path d="M12 2l1.8 7.6L22 14v2l-8.2-2.2L13 19l3 2v1l-4-1-4 1v-1l3-2-.8-5.2L2 16v-2l8.2-4.4z"/></symbol>
+  <symbol id="i-reg" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M12 9.5v5M9.5 12h5"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></symbol>
+  <symbol id="i-alt" viewBox="0 0 24 24"><path d="M2 19l7.5-13 4 6.5L16 9l6 10z"/></symbol>
+  <symbol id="i-spd" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 13l3.5-4M10 3h4"/></symbol>
+  <symbol id="i-hdg" viewBox="0 0 24 24"><path d="M3 11.5L21 3l-8.5 18-1.5-7.5z"/></symbol>
+  <symbol id="i-dst" viewBox="0 0 24 24"><path d="M12 22s7-6.5 7-12a7 7 0 0 0-14 0c0 5.500 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/></symbol>
+</svg>
+
+<div id="poster">
+  <div id="sky"><div id="stars"></div><div id="sun"></div><div id="moon"></div></div>
+  <svg id="cf" class="clouds layer" viewBox="0 0 1600 1000" preserveAspectRatio="xMinYMax slice"></svg>
+  <svg id="cm" class="clouds layer" viewBox="0 0 1600 1000" preserveAspectRatio="xMinYMax slice"></svg>
+  <div id="far" class="layer dyn"><svg id="planeSvg"></svg></div>
+  <svg id="cc" class="clouds layer" viewBox="0 0 1600 1000" preserveAspectRatio="xMinYMax slice"></svg>
+  <svg id="cn" class="clouds layer" viewBox="0 0 1600 1000" preserveAspectRatio="xMinYMax slice"></svg>
+  <img id="tail" class="layer dyn" alt="Хвост самолёта с ливреей авиакомпании" hidden>
+  <div id="grain"></div>
+
+  <aside id="info" class="dyn" aria-live="polite">
+    <div id="clear">Clear sky</div>
+    <div class="data">
+      <div id="airline"></div>
+      <div id="route">
+        <div><div class="code" id="from"></div><div class="city" id="fromCity"></div></div>
+        <div class="arrow">→</div>
+        <div class="to"><div class="code" id="to"></div><div class="city" id="toCity"></div></div>
+      </div>
+      <hr>
+      <div class="specs">
+      <div class="row"><svg class="ic f"><use href="#i-plane"/></svg><span class="k">Aircraft</span><span class="v" id="vModel"></span></div>
+      <div class="row"><svg class="ic"><use href="#i-reg"/></svg><span class="k">Registration</span><span class="v" id="vReg"><span id="registrationText"></span> <img class="flag" id="countryFlag" alt=""></span></div>
+      </div>
+      <hr>
+      <div class="specs">
+      <div class="row"><svg class="ic f"><use href="#i-alt"/></svg><span class="k">Altitude</span><span class="v" id="vAlt"></span></div>
+      <div class="row"><svg class="ic"><use href="#i-spd"/></svg><span class="k">Ground speed</span><span class="v" id="vSpd"></span></div>
+      <div class="row"><svg class="ic f"><use href="#i-hdg"/></svg><span class="k">Heading</span><span class="v" id="vHdg"></span></div>
+      <div class="row"><svg class="ic"><use href="#i-dst"/></svg><span class="k">Distance</span><span class="v" id="vDst"></span></div>
+      </div>
+    </div>
+  </aside>
 </div>
-<aside id="aircraft-panel" hidden aria-live="polite">
-  <h2 id="aircraft-model"></h2>
-  <img id="aircraft-illustration" src="/aircraft.svg" alt="Схема Boeing 737-800">
-  <dl id="aircraft-specs">
-    <dt>Год постройки</dt><dd id="aircraft-year"></dd>
-    <dt>Серийный номер</dt><dd id="aircraft-serial"></dd>
-    <dt>Регистрация</dt><dd id="aircraft-registration"></dd>
-    <dt>Страна регистрации</dt><dd id="aircraft-country"></dd>
-    <dt>Возраст по данным API</dt><dd id="aircraft-age"></dd>
-  </dl>
-</aside>
+
 <script src="https://cdn.jsdelivr.net/npm/suncalc@1.9.0/suncalc.js"></script>
 <script>
 (() => {
   const LAT = 59.9343, LON = 30.3351;
-  const VIEW = 285, FOV = 110, HOR = .78;
+  const VIEW = 285, FOV = 110, HOR = .78;           // куда «смотрит» кадр, угол обзора, горизонт (доля высоты)
+
+  // Силуэты самолётов вдали: ICAO-тип совпадает с именем SVG.
+  const SHAPE_DIR = "/shapesSVG/";
+  const SHAPES = { default: "B738.svg" };
+  // Имена полей API, которых раньше в интерфейсе не было — правятся здесь.
+  const F = { airline: "airline_name", originCity: "origin_city", destCity: "dest_city", heading: "heading" };
+
   const $ = id => document.getElementById(id);
+  const poster = $("poster");
   const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
   const hex = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
   const mix = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
+  const rgb = c => `rgb(${c.map(Math.round)})`;
   const rgba = (c, a = 1) => `rgba(${c.map(Math.round)},${a})`;
   let warnedAboutSunCalc = false;
+
+  /* ---------- небо ---------- */
   const colors = [
     [-18, "#04060d", "#0a1024"], [-8, "#0d1733", "#2a2f5a"],
-    [-3, "#25356b", "#c76a6a"], [2, "#4a6aa8", "#f0a070"],
-    [10, "#5a8fd0", "#f5d2a8"], [30, "#3f86d6", "#bcdcf5"]
+    [-3, "#25356b", "#c76a6a"], [2, "#2f4f92", "#e0a070"],
+    [10, "#1d4a8c", "#b9a98f"], [30, "#15407c", "#2a62a6"]
   ].map(([alt, top, horizon]) => [alt, hex(top), hex(horizon)]);
 
   function skyAt(alt) {
@@ -97,37 +145,13 @@
     return [last[1], last[2]];
   }
 
-  function skyline(seed, minHeight, maxHeight, minWidth, maxWidth, start = 0, end = 2000) {
-    const random = () => (seed = seed * 16807 % 2147483647) / 2147483647;
-    let x = start, path = `M${start} 500`;
-    while (x < end) {
-      const width = minWidth + random() * (maxWidth - minWidth);
-      path += `V${500 - minHeight - random() * (maxHeight - minHeight)}H${x += width}`;
-    }
-    return `${path}V500Z`;
-  }
-
-  let windows = "", lamps = "", glow = "";
-  for (let x = 448; x < 760; x += 26) {
-    for (const y of [436, 460]) windows += `<rect x="${x}" y="${y}" width="9" height="14"/>`;
-  }
-  for (let x = 120; x < 2000; x += 300) {
-    lamps += `<rect x="${x}" y="355" width="5" height="100"/><circle cx="${x + 2.5}" cy="348" r="9"/>`;
-    glow += `<circle cx="${x + 2.5}" cy="348" r="38" fill="#ffb860" opacity=".28"/><circle cx="${x + 2.5}" cy="348" r="7" fill="#ffe2a8"/>`;
-  }
-
-  $("l0").innerHTML = `<path d="${skyline(7, 14, 46, 30, 80)}"/><path d="M1720 500L1738 190L1752 30L1766 190L1784 500Z"/>`;
-  $("l1").innerHTML = `<path d="${skyline(3, 16, 36, 25, 60)}"/><rect x="880" y="448" width="640" height="52"/><rect x="1130" y="408" width="140" height="42"/><path d="M1184 410V332L1196 300L1198 150L1200 40L1202 150L1204 300L1216 332V410Z"/>`;
-  $("l2").innerHTML = `<path d="${skyline(21, 26, 58, 40, 90, 0, 980)}"/><rect x="430" y="412" width="340" height="88"/><path d="M505 414L600 372L695 414Z"/><g id="rostral"><rect x="372" y="345" width="20" height="155"/><rect x="365" y="336" width="34" height="12"/><path d="M372 336L382 312L392 336Z"/></g><use href="#rostral" x="436"/><g id="windows" fill="#ffcf7a" opacity="0">${windows}</g>`;
-  $("l3").innerHTML = `<rect y="452" width="2000" height="120"/><rect y="444" width="2000" height="10"/>${lamps}<g id="lamp-glow" opacity="0">${glow}</g>`;
   $("stars").innerHTML = Array.from({ length: 90 }, () =>
     `<i style="left:${Math.random() * 100}%;top:${Math.random() * 100}%;opacity:${.3 + Math.random() * .7}"></i>`
   ).join("");
 
-  const haze = [.7, .45, .2];
   function toXY(az, alt) {
     const dx = ((az - VIEW + 540) % 360) - 180;
-    return [50 + dx / FOV * 100, innerHeight * HOR * (1 - alt / 60)];
+    return [50 + dx / FOV * 100, poster.clientHeight * HOR * (1 - alt / 60)];
   }
 
   function solarPosition(date) {
@@ -135,7 +159,6 @@
     const century = (jd - 2451545) / 36525;
     const meanLongitude = ((280.46646 + century * (36000.76983 + century * .0003032)) % 360 + 360) % 360;
     const meanAnomaly = (357.52911 + century * (35999.05029 - .0001537 * century)) * Math.PI / 180;
-    const eccentricity = .016708634 - century * (.000042037 + .0000001267 * century);
     const center = Math.sin(meanAnomaly) * (1.914602 - century * (.004817 + .000014 * century)) +
       Math.sin(2 * meanAnomaly) * (.019993 - .000101 * century) +
       Math.sin(3 * meanAnomaly) * .000289;
@@ -157,14 +180,71 @@
     return { altitude: altitude * 180 / Math.PI, azimuth };
   }
 
+  /* ---------- облака ---------- */
+  // Как на концепте: 4 плоских слоя, внутри слоя ни теней, ни градиентов. Слой — «банк» из куполов
+  // [x, высота, полуширина]; кромку лепит куча мелких кругов: на каждой лопасти сидят лопасти поменьше,
+  // на тех — ещё мельче (цветная капуста). r0 — размер крупной лопасти.
+  const CLOUD_H = .68;   // общая высота облаков: 1 — как на концепте, меньше — ниже
+  const EDGE = 50;       // высота нижнего края постера в координатах viewBox — её не трогаем
+  function bank(seed, heads, r0) {
+    const random = () => (seed = seed * 16807 % 2147483647) / 2147483647;
+    const B = 1000, f = n => n.toFixed(1);
+    const dome = x => Math.max(0, ...heads.map(([cx, h, hw]) => h * Math.sqrt(Math.max(0, 1 - ((x - cx) / hw) ** 2))));
+    const height = x => { const v = dome(x); return v > EDGE ? EDGE + (v - EDGE) * CLOUD_H : v; };   // сжимаем только видимую часть
+    const x0 = Math.min(...heads.map(([cx, , hw]) => cx - hw)), x1 = Math.max(...heads.map(([cx, , hw]) => cx + hw));
+    let out = "";
+    const lobe = (x, y, r, dir, depth) => {
+      out += `<circle cx="${f(x)}" cy="${f(y)}" r="${f(r)}"/>`;
+      if (!depth) return;
+      for (let i = 0, n = 3 + (random() < .5); i < n; i++) {
+        const a = dir + (random() - .5) * 2.6, rc = r * (.36 + .22 * random()), d = r - rc * .55;
+        lobe(x + Math.cos(a) * d, y + Math.sin(a) * d, rc, a, depth - 1);
+      }
+    };
+    for (let x = x0; x <= x1; x += r0 * (.8 + .5 * random())) {
+      const h = height(x);
+      if (h < 8) continue;
+      const slope = (height(x + 4) - height(x - 4)) / 8, r = r0 * (.75 + .6 * random());
+      lobe(x, B - h + r * .7, r, Math.atan2(-1, -slope), 2);               // наружу от контура
+    }
+    for (let x = x0; x <= x1; x += r0 * .6) {                              // подкладка: закрывает щели в долинах
+      const h = height(x);
+      if (h >= 8) out += `<circle cx="${f(x)}" cy="${f(B - h + r0)}" r="${f(r0 * .9)}"/>`;
+    }
+    let d = `M${f(x0)} ${B + 100}`;                                        // сплошная заливка под кромкой
+    for (let x = x0; x <= x1; x += 8) d += `L${f(x)} ${f(B - Math.max(0, height(x) - r0 * .6))}`;
+    return `<path d="${d}L${f(x1)} ${B + 100}Z"/>` + out;
+  }
+  // сзади вперёд: дальние обрывки → средние → светлая масса сверху → передний голубой, он вгрызается в светлое
+  $("cf").innerHTML = bank(11, [[70, 395, 70], [130, 335, 60], [470, 265, 90], [620, 205, 80], [800, 170, 90]], 22);
+  $("cm").innerHTML = bank(23, [[320, 375, 110], [450, 300, 100], [580, 235, 110], [700, 170, 110], [850, 130, 100], [1000, 100, 110]], 32);
+  $("cc").innerHTML = bank(5, [[120, 330, 150], [270, 290, 100], [370, 225, 120], [510, 215, 110], [640, 140, 100], [780, 105, 100], [900, 75, 80]], 42);
+  $("cn").innerHTML = bank(17, [[90, 215, 90], [230, 285, 95], [340, 135, 90], [460, 130, 110], [570, 90, 90], [660, 75, 80]], 38);
+
+  /* ---------- тема по высоте солнца ---------- */
+  let themeKey = "";
+  function applyTheme(alt, horizon) {
+    const day = clamp((alt + 4) / 16);                     // 0 — ночь, 1 — день
+    const glow = clamp(1 - Math.abs(alt - 2) / 14);        // закат/рассвет
+    const lit = mix(mix([40, 52, 90], [243, 230, 203], day), [255, 176, 128], glow * .35);
+    const shade = mix(mix([18, 26, 56], [96, 138, 198], day), [120, 80, 120], glow * .25);
+    const paints = { cf: mix(shade, horizon, .8), cm: mix(shade, horizon, .5), cc: lit, cn: shade };
+    const plane = mix([74, 88, 126], [244, 234, 212], day);
+    const bright = (.28 + .72 * day).toFixed(2);
+    const key = [plane, ...Object.values(paints)].map(c => c.map(Math.round)).join("|") + bright;
+    if (key === themeKey) return;
+    themeKey = key;
+    for (const [id, c] of Object.entries(paints)) $(id).style.setProperty("--c", rgb(c));
+    poster.style.setProperty("--plane", rgb(plane));
+    $("tail").style.filter = `brightness(${bright})`;
+  }
+
   function render(date) {
     if (!window.SunCalc && !warnedAboutSunCalc) {
       console.warn("SunCalc did not load; moon rendering is unavailable, using calculated solar position.");
       warnedAboutSunCalc = true;
     }
-    const position = window.SunCalc
-      ? SunCalc.getPosition(date, LAT, LON)
-      : solarPosition(date);
+    const position = window.SunCalc ? SunCalc.getPosition(date, LAT, LON) : solarPosition(date);
     const alt = window.SunCalc ? position.altitude * 180 / Math.PI : position.altitude;
     const az = window.SunCalc ? (position.azimuth * 180 / Math.PI + 180) % 360 : position.azimuth;
     const [top, horizon] = skyAt(alt);
@@ -173,7 +253,7 @@
     $("sky").style.background =
       `radial-gradient(ellipse 70% 55% at ${clamp(sunX, -20, 120)}% ${sunY}px,rgba(255,140,60,${glow * .7}),transparent 70%),` +
       `linear-gradient(${rgba(top)} 0%,${rgba(horizon)} ${HOR * 100}%,${rgba(horizon)} 100%)`;
-    const sunColor = mix([255, 110, 40], [255, 250, 225], clamp(alt / 14));
+    const sunColor = mix([255, 110, 40], [255, 246, 220], clamp(alt / 14));
     $("sun").style.cssText = `left:${sunX}%;top:${sunY}px;background:${rgba(sunColor)};box-shadow:0 0 ${50 + glow * 60}px ${12 + glow * 20}px ${rgba(sunColor, .55)};display:${alt > -1.5 && sunX > -5 && sunX < 105 ? "block" : "none"}`;
     if (window.SunCalc) {
       const moonPosition = SunCalc.getMoonPosition(date, LAT, LON);
@@ -186,107 +266,230 @@
       $("moon").style.display = "none";
     }
     $("stars").style.opacity = clamp((-alt - 6) / 8);
-    const darkness = clamp((2 - alt) / 8);
-    const ink = mix(hex("#05070d"), hex("#46566f"), clamp((alt + 4) / 25));
-    ["l0", "l1", "l2"].forEach((id, i) => { $(id).style.fill = rgba(mix(ink, horizon, haze[i])); });
-    $("l3").style.fill = rgba(mix(ink, [0, 0, 0], .3));
-    $("windows").style.opacity = darkness;
-    $("lamp-glow").style.opacity = darkness;
-    const streak = clamp((alt + 1) / 8) * .7;
-    const inView = sunX > 0 && sunX < 100;
-    $("water").style.background =
-      (inView ? `radial-gradient(ellipse 5% 100% at ${sunX}% 0,${rgba(sunColor, streak)},transparent),` : "") +
-      `linear-gradient(${rgba(mix(horizon, top, .25))},${rgba(mix(top, [0, 0, 0], .5))})`;
+    applyTheme(alt, horizon);
   }
 
-  const layers = ["l0", "l1", "l2", "l3"].map($);
-  const depth = [5, 12, 24, 46];
+  /* ---------- параллакс: самолёт вдали, облака, хвост ---------- */
+  const layers = [[$("cf"), 10], [$("far"), 12], [$("cm"), 15], [$("cc"), 21], [$("cn"), 28], [$("tail"), 44]];
   let targetX = 0, targetY = 0, currentX = 0, currentY = 0;
-  addEventListener("pointermove", event => {
-    targetX = event.clientX / innerWidth * 2 - 1;
-    targetY = event.clientY / innerHeight * 2 - 1;
+  addEventListener("pointermove", e => {
+    targetX = e.clientX / innerWidth * 2 - 1;
+    targetY = e.clientY / innerHeight * 2 - 1;
   });
-  addEventListener("deviceorientation", event => {
-    if (event.gamma != null) {
-      targetX = clamp(event.gamma / 30, -1, 1);
-      targetY = clamp((event.beta - 45) / 30, -1, 1);
+  addEventListener("deviceorientation", e => {
+    if (e.gamma != null) {
+      targetX = clamp(e.gamma / 30, -1, 1);
+      targetY = clamp((e.beta - 45) / 30, -1, 1);
     }
   });
-  addEventListener("resize", () => render(new Date()));
+  let planeFlight = null;
+  let planeFlightStarted = null;
+  const PLANE_FLIGHT_MS = 90000;
   (function animate() {
     currentX += (targetX - currentX) * .07;
     currentY += (targetY - currentY) * .07;
-    layers.forEach((layer, i) => {
-      layer.style.transform = `translate3d(calc(-50% + ${-currentX * depth[i]}px),${-currentY * depth[i] * .4}px,0)`;
+    layers.forEach(([el, d]) => {
+      el.style.transform = `translate3d(${-currentX * d}px,${-currentY * d * .4}px,0)`;
     });
+    if (planeFlight) {
+      const progress = ((performance.now() - planeFlightStarted) % PLANE_FLIGHT_MS) / PLANE_FLIGHT_MS;
+      const x = planeFlight.startX + planeFlight.horizontalTravel * progress;
+      const y = planeFlight.startY - planeFlight.horizontalTravel * Math.tan(planeFlight.trajectoryAngle * Math.PI / 180) * progress;
+      const { bounds, group, scale, angle } = planeFlight;
+      group.setAttribute("transform",
+        `translate(${x} ${y}) rotate(${angle}) scale(${scale}) translate(${-(bounds.x + bounds.width / 2)} ${-(bounds.y + bounds.height / 2)})`);
+    }
     requestAnimationFrame(animate);
   })();
 
-  function updateFromCurrentTime() {
-    render(new Date());
+  /* ---------- самолёт вдали: силуэт с постоянной диагональной траекторией ---------- */
+  const NS = "http://www.w3.org/2000/svg";
+  const shapeCache = {};
+  const shapeFile = a => {
+    const type = typeof a.type === "string" ? a.type.toUpperCase() : "";
+    return /^[A-Z0-9]{1,4}$/.test(type) ? `${type}.svg` : SHAPES.default;
+  };
+  function shapeDoc(file) {
+    return shapeCache[file] ||= fetch(SHAPE_DIR + file).then(r => {
+      if (!r.ok) throw new Error(file + ": " + r.status);
+      return r.text();
+    }).then(t => new DOMParser().parseFromString(t, "image/svg+xml").documentElement);
   }
-  updateFromCurrentTime();
-  setInterval(updateFromCurrentTime, 1000);
-})();
-</script>
-<script>
-  const card = document.getElementById("card");
-  const tail = document.getElementById("tail");
-  const aircraftPanel = document.getElementById("aircraft-panel");
-  let current;   // undefined до первого ответа
-  let currentTailCode = null;
-  let tailFailed = false;
 
-  tail.onload = () => { tailFailed = false; tail.hidden = false; };
-  tail.onerror = () => { tailFailed = true; tail.hidden = true; };
-
-  function showAircraftProfile(a) {
-    aircraftPanel.hidden = !a;
+  let drawId = 0, lastAircraft = null;
+  async function drawPlane(a) {
+    const id = ++drawId, svg = $("planeSvg");
+    const W = poster.clientWidth, H = poster.clientHeight;
+    planeFlight = null;
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    svg.innerHTML = "";
     if (!a) return;
-    document.getElementById("aircraft-model").textContent = a.model_name || "N/A";
-    document.getElementById("aircraft-year").textContent = a.year_built || "N/A";
-    document.getElementById("aircraft-serial").textContent = a.serial_number || "N/A";
-    document.getElementById("aircraft-registration").textContent = a.registration || "N/A";
-    document.getElementById("aircraft-country").textContent = a.registration_country || "N/A";
-    document.getElementById("aircraft-age").textContent = a.aircraft_age || "НN/A";
+    if (planeFlightStarted === null) planeFlightStarted = performance.now();
+
+    const span = W * .015;
+    const trajectoryAngle = 55;
+    const ang = 90 - trajectoryAngle;                             // SVG изначально направлен вверх
+
+    const g = document.createElementNS(NS, "g");
+    g.setAttribute("class", "plane");
+    svg.appendChild(g);
+    let b = { x: -span / 2, y: -span / 2, width: span, height: span };
+    try {
+      const file = shapeFile(a);
+      let doc;
+      try {
+        doc = await shapeDoc(file);
+      } catch (error) {
+        if (file === SHAPES.default) throw error;
+        doc = await shapeDoc(SHAPES.default);
+      }
+      if (id !== drawId) return;
+      [...doc.children].filter(n => /^(g|path)$/.test(n.localName))
+        .forEach(n => g.appendChild(document.importNode(n, true)));
+      g.querySelectorAll("path").forEach(p =>
+        p.setAttribute("style", "fill:currentColor;stroke:currentColor;stroke-width:.35;stroke-linejoin:round"));
+      b = g.getBBox();
+    } catch (e) { console.warn("silhouette:", e.message); }
+    const startX = W * .28;
+    const startY = H * 0.95;
+    const horizontalTravel = W + span - startX;
+    planeFlight = {
+      group: g,
+      bounds: b,
+      scale: span / b.width,
+      angle: ang,
+      trajectoryAngle,
+      startX,
+      startY,
+      horizontalTravel,
+    };
   }
+
+  /* ---------- карточка с данными ---------- */
+  const tail = $("tail");
+  let current;                 // undefined до первого ответа
+  let currentTailCode = null, checkedTailCode = null, requestedTailCode = null, readyTailCode = null;
+  tail.onload = () => { tail.hidden = false; };
+  tail.onerror = () => {
+    if (tail.getAttribute("src") === "/plane/empty.png") {
+      tail.hidden = true;
+      return;
+    }
+    requestedTailCode = null;
+    readyTailCode = null;
+    tail.src = "/plane/empty.png";
+  };
+
+  function preloadTail(code) {
+    requestedTailCode = code;
+    const preload = new Image();
+    preload.onload = () => {
+      if (currentTailCode === code) readyTailCode = code;
+    };
+    preload.onerror = () => {
+      if (currentTailCode === code) requestedTailCode = null;
+    };
+    preload.src = `/plane/${code}.png`;
+  }
+
+  const COMPASS = ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
+  const fmt = n => Math.round(n).toLocaleString("ru-RU");
+  const dash = v => (v === undefined || v === null || v === "") ? "—" : v;
 
   function show(a) {
-    card.classList.toggle("empty", !a);
-    showAircraftProfile(a);
-    call.textContent = a ? (a.callsign || "—") : "Clear sky";
-    route.textContent = a ? `${a.type}   ${a.origin || "—"} → ${a.dest || "—"}` : "";
-    meta.textContent = a
-      ? `${Math.round(a.alt_m)} m   ${Math.round(a.speed_kt)} kt   ` +
-        `${(a.dist_m / 1000).toFixed(1)} km   az ${Math.round(a.bearing)}°   el ${Math.round(a.elevation)}°`
-      : "";
-
-    const code = a && typeof a.airline_iata === "string" &&
-      /^[A-Z0-9]{2}$/i.test(a.airline_iata)
-      ? a.airline_iata.toUpperCase()
-      : null;
+    lastAircraft = a;
+    poster.classList.toggle("empty", !a);
+    drawPlane(a);
+    const code = a && typeof a.airline_iata === "string" && /^[A-Z0-9]{2}$/i.test(a.airline_iata)
+      ? a.airline_iata.toUpperCase() : null;
     if (code !== currentTailCode) {
       currentTailCode = code;
-      tailFailed = false;
-      if (code) tail.src = `/plane/${code}.png`;
+      checkedTailCode = null;
+      requestedTailCode = null;
+      readyTailCode = null;
+      tail.hidden = true;
     }
-    tail.hidden = !code || tailFailed;
+    if (!code) tail.hidden = true;
+    if (code) {
+      const imageUrl = `/plane/${code}.png`;
+      if (readyTailCode === code) {
+        if (tail.getAttribute("src") !== imageUrl) tail.src = imageUrl;
+      } else if (checkedTailCode !== code) {
+        checkedTailCode = code;
+        fetch(`/plane-status/${code}.json`)
+          .then(response => {
+            if (!response.ok) throw new Error(`livery status: ${response.status}`);
+            return response.json();
+          })
+          .then(({ available }) => {
+            if (currentTailCode !== code) return;
+            if (available) {
+              readyTailCode = code;
+              tail.src = imageUrl;
+            } else {
+              tail.src = "/plane/empty.png";
+              preloadTail(code);
+            }
+          })
+          .catch(() => {
+            if (currentTailCode !== code) return;
+            checkedTailCode = null;
+            tail.src = "/plane/empty.png";
+            if (requestedTailCode !== code) preloadTail(code);
+          });
+      } else if (requestedTailCode !== code && readyTailCode !== code) {
+        preloadTail(code);
+      }
+    }
+    if (!a) return;
+
+    $("airline").textContent = a.callsign || a[F.airline] || a.airline || a.airline_iata || "";
+    $("from").textContent = a.origin || "—";
+    $("to").textContent = a.dest || "—";
+    $("fromCity").textContent = a[F.originCity] || "";
+    $("toCity").textContent = a[F.destCity] || "";
+
+    $("vModel").textContent = dash(a.model_name || a.type);
+    $("registrationText").textContent = [a.registration, a.registration_country].filter(Boolean).join(" ") || "—";
+    const countryCode = (a.registration_country_iso2 || "").toUpperCase();
+    const countryFlag = $("countryFlag");
+    if (/^[A-Z]{2}$/.test(countryCode)) {
+      countryFlag.src = `https://flagcdn.com/w40/${countryCode.toLowerCase()}.png`;
+      countryFlag.alt = `${a.registration_country || countryCode} flag`;
+    } else {
+      countryFlag.removeAttribute("src");
+      countryFlag.alt = "";
+    }
+    $("vAlt").textContent = Number.isFinite(a.alt_m) ? `${fmt(a.alt_m / 0.3048)} ft` : "—";
+    $("vSpd").textContent = Number.isFinite(a.speed_kt) ? `${fmt(a.speed_kt)} kt` : "—";
+    const h = a[F.heading];
+    $("vHdg").textContent = Number.isFinite(h) ? `${Math.round(h)}° (${COMPASS[Math.round(h / 22.5) % 16]})` : "—";
+    $("vDst").textContent = Number.isFinite(a.dist_m) ? `${(a.dist_m / 1000).toFixed(a.dist_m < 10000 ? 1 : 0)} km` : "—";
   }
 
   async function tick() {
     try {
       const { aircraft } = await (await fetch("/api")).json();
       const key = aircraft
-        ? `${aircraft.callsign}:${aircraft.airline_iata || ""}`
+        ? `${aircraft.callsign}:${aircraft.registration}:${aircraft.airline_iata || ""}`
         : null;
       if (key !== current) {
-        card.classList.add("hidden");
-        setTimeout(() => { show(aircraft); card.classList.remove("hidden"); }, current === undefined ? 0 : 1500);
+        poster.classList.add("swap");
+        setTimeout(() => {
+          if (aircraft) planeFlightStarted = performance.now();
+          show(aircraft);
+          poster.classList.remove("swap");
+        }, current === undefined ? 0 : 1500);
         current = key;
       } else if (aircraft) {
-        meta.textContent = ""; show(aircraft);   // обновить цифры без перехода
+        show(aircraft);                                          // обновить цифры без перехода
       }
     } catch (e) {}
   }
+
+  addEventListener("resize", () => { render(new Date()); drawPlane(lastAircraft); });
+  render(new Date());
+  setInterval(() => render(new Date()), 1000);
   tick(); setInterval(tick, 10000);
+})();
 </script>
