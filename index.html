@@ -8,9 +8,11 @@
   :root { --paper: #efe3c8; --ink: #f1e6cf; }
   html, body { margin: 0; height: 100%; overflow: hidden; background: var(--paper);
                font-family: "Barlow Condensed", "Oswald", "Arial Narrow", "Segoe UI", sans-serif; color: var(--ink); }
-
   /* рамка постера; всё, что выезжает при параллаксе, обрезается ею */
-  #poster { position: absolute; inset: .8vmin; overflow: hidden; background: #14437f;
+  /*#poster { position: absolute; inset: .8vmin; overflow: hidden; background: #14437f;*/
+  
+  /* без рамки: фон занимает весь экран */
+  #poster { position: absolute; inset: 0; overflow: hidden; background: #14437f;
             --th: min(60vh, 37.5vw); }
   #sky, #far { position: absolute; inset: 0; }
   #stars { position: absolute; inset: 0; }
