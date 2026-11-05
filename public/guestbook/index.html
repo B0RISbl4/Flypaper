@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Гостевая книга — Flypaper</title>
+  <meta name="description" content="Гостевая книга сайта Flypaper.">
+  <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;700;800&family=Oswald:wght@500;600&display=swap">
+  <link rel="stylesheet" href="../assets/css/main.css">
+  <link rel="stylesheet" href="../assets/css/pages/guestbook.css">
+  <script type="module" src="../assets/js/main.js"></script>
+  <script type="module" src="../assets/js/pages/guestbook.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">К содержимому</a>
+  <header class="site-header">
+    <div class="container site-header__inner">
+      <a class="logo" href="../index.html" aria-label="Flypaper — на главную"><span class="logo__mark" aria-hidden="true"></span><span class="logo__text">Fly<span>paper</span></span></a>
+      <button class="burger" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="Открыть меню">
+        <span class="burger__bar"></span>
+      </button>
+      <nav class="nav" id="site-nav" aria-label="Основное меню">
+        <ul class="nav__list">
+          <li><a class="nav__link" href="../index.html">Главная</a></li>
+          <li><a class="nav__link" href="../articles/index.html">Статьи</a></li>
+          <li><a class="nav__link" href="../gallery/index.html">Галерея</a></li>
+          <li><a class="nav__link" href="../labs/index.html">Лабы</a></li>
+          <li><a class="nav__link" href="../wallpapers/index.html">Обои</a></li>
+          <li><a class="nav__link is-active" href="../guestbook/index.html" aria-current="page">Гостевая</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+<div class="container">
+  <header class="page-head">
+    <nav class="breadcrumbs" aria-label="Навигационная цепочка"><a href="../index.html">Главная</a> / Гостевая книга</nav>
+    <h1>Гостевая книга</h1>
+    <p class="page-head__lead">Оставьте пару слов о сайте. Вместо города укажите код аэропорта, а вместо аватарки — код авиакомпании: в записи появится хвост её самолёта.</p>
+  </header>
+
+  <div class="gb">
+    <form class="gb-form" id="gb-form" novalidate>
+      <h2 class="gb-form__title">Новая запись</h2>
+
+      <label class="field">
+        <span class="field__label">Имя</span>
+        <input class="field__input" name="name" maxlength="40" required autocomplete="nickname">
+      </label>
+
+      <div class="gb-form__codes">
+        <label class="field">
+          <span class="field__label">Аэропорт</span>
+          <input class="field__input field__input--code" name="airport" maxlength="3" placeholder="LED"
+                 pattern="[A-Za-z]{3}" autocomplete="off" spellcheck="false">
+          <span class="field__hint">Код IATA, 3 буквы</span>
+        </label>
+        <label class="field">
+          <span class="field__label">Авиакомпания</span>
+          <input class="field__input field__input--code" name="airline" maxlength="2" placeholder="S7"
+                 pattern="[A-Za-z0-9]{2}" autocomplete="off" spellcheck="false">
+          <span class="field__hint">Код IATA, 2 символа</span>
+        </label>
+        <img class="tail-avatar" id="gb-preview" src="../assets/img/tails/default.svg" alt="Хвост выбранной авиакомпании" width="72" height="72">
+      </div>
+
+      <label class="field">
+        <span class="field__label">Сообщение</span>
+        <textarea class="field__input" name="text" rows="5" maxlength="1000" required></textarea>
+      </label>
+
+      <p class="gb-form__error" id="gb-error" role="alert"></p>
+      <button class="btn arrow" type="submit">Отправить </button>
+    </form>
+
+    <section class="gb-list" aria-labelledby="gb-list-title">
+      <h2 class="gb-list__title" id="gb-list-title">Записи <span id="gb-count"></span></h2>
+      <div id="gb-entries" aria-live="polite"></div>
+    </section>
+  </div>
+</div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container site-footer__inner">
+      <a class="logo logo--light" href="../index.html" aria-label="Flypaper — на главную"><span class="logo__mark" aria-hidden="true"></span><span class="logo__text">Fly<span>paper</span></span></a>
+      <figure class="footer-quote">
+        <blockquote>«И только небо обещало успокоение»</blockquote>
+        <figcaption>Лев Толстой, «Война и мир»</figcaption>
+      </figure>
+      <nav aria-label="Меню в подвале">
+        <ul class="footer-nav">
+          <li><a href="../index.html">Главная</a></li>
+          <li><a href="../articles/index.html">Статьи</a></li>
+          <li><a href="../gallery/index.html">Галерея</a></li>
+          <li><a href="../labs/index.html">Лабы</a></li>
+          <li><a href="../wallpapers/index.html">Обои</a></li>
+          <li><a href="../guestbook/index.html">Гостевая</a></li>
+        </ul>
+      </nav>
+    </div>
+  </footer>
+</body>
+</html>

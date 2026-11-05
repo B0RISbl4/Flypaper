@@ -1,0 +1,8 @@
+.page-head {
+  padding-block: clamp(32px, 5vw, 56px) 8px;
+}
+.page-head h1 { font-size: clamp(2rem, 5vw, 3.4rem); max-width: 20ch; }
+.page-head__lead { max-width: 62ch; font-size: 1.1rem; color: var(--muted); }
+
+.breadcrumbs { margin-bottom: 14px; color: var(--muted); }
+.breadcrumbs a { color: var(--muted); }

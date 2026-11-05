@@ -1,0 +1,139 @@
+.post-list { display: grid; gap: 28px; }
+.post {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  background: var(--card);
+  box-shadow: var(--shadow);
+}
+.post__img img { width: 100%; height: 100%; object-fit: cover; aspect-ratio: 4 / 3; }
+.post__body { padding: clamp(20px, 3vw, 32px); }
+.post__body h2 { font-size: clamp(1.4rem, 2.6vw, 1.9rem); margin-top: .4em; }
+.post__body h2 a { color: var(--navy); text-decoration: none; }
+.post__body h2 a:hover { color: var(--orange); }
+
+.prose {
+  display: flow-root;
+  counter-reset: figure;
+  font-size: clamp(1rem, .9rem + .4vw, 1.2rem);
+  line-height: 1.65;
+}
+.prose h2 { margin-top: 1.4em; font-size: clamp(1.35rem, 2.6vw, 1.75rem); }
+
+.prose > p:first-child::first-letter {
+  float: left;
+  margin: .08em .12em 0 0;
+  font-family: var(--font-label);
+  font-weight: 600;
+  font-size: 4.3em;
+  line-height: .8;
+  color: var(--orange);
+  text-shadow: 3px 3px 0 var(--yellow);
+}
+
+.prose blockquote {
+  display: flow-root;
+  margin: 1.8em 0;
+  padding: 1.1em .4em;
+  quotes: "«" "»";
+  text-align: center;
+  font-family: "Fira Sans Extra Condensed", var(--font-label);
+  font-style: italic;
+  font-weight: 600;
+  font-size: clamp(1.45rem, 3vw, 2rem);
+  line-height: 1.15;
+  color: var(--navy);
+  background:
+    linear-gradient(var(--orange), var(--orange)) 0 0 / 100% 4px no-repeat,
+    linear-gradient(var(--yellow), var(--yellow)) 0 7px / 100% 3px no-repeat,
+    linear-gradient(var(--yellow), var(--yellow)) 0 calc(100% - 7px) / 100% 3px no-repeat,
+    linear-gradient(var(--orange), var(--orange)) 0 100% / 100% 4px no-repeat;
+}
+.prose blockquote::before { content: open-quote; color: var(--orange); }
+.prose blockquote::after { content: close-quote; color: var(--orange); }
+
+.figure { margin: 0; }
+.figure img { width: 100%; box-shadow: var(--shadow); }
+.figure figcaption { margin-top: 6px; font-size: .85rem; color: var(--muted); }
+.prose .figure figcaption::before {
+  counter-increment: figure;
+  content: "Рис. " counter(figure) " — ";
+  font-family: var(--font-label);
+  font-weight: 500;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--orange);
+}
+
+.float-left,
+.float-right { width: min(48%, 540px); margin-bottom: 1em; }
+.float-left { float: left; margin-right: 1.6em; margin-top: .35em; }
+.float-right { float: right; margin-left: 1.6em; margin-top: .35em; }
+
+.article-cover { margin-top: 24px; }
+.article-cover img { width: 100%; aspect-ratio: 2 / 1; object-fit: cover; box-shadow: var(--shadow); }
+.article-cover--low img { object-position: center 60%; }
+
+.article-meta {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  width: fit-content;
+  max-width: 100%;
+  margin: 18px 0 28px;
+  padding: 9px 18px 9px 50px;
+  background:
+    repeating-linear-gradient(90deg, rgba(120, 85, 35, .05) 0 2px, transparent 2px 5px),
+    var(--kraft);
+  color: var(--navy-dark);
+  font-family: var(--font-label);
+  font-size: .85rem;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  clip-path: polygon(22px 0, 100% 0, 100% 100%, 22px 100%, 0 calc(100% - 16px), 0 16px);
+}
+.article-meta::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 16px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--paper);
+  box-shadow: 0 0 0 3px rgba(29, 53, 87, .45), inset 1px 1px 2px rgba(0, 0, 0, .35);
+  transform: translateY(-50%);
+}
+.article-meta span { padding: 2px 14px; }
+.article-meta span + span { border-left: 1px dashed rgba(22, 37, 59, .5); }
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1px;
+  margin: 1.6em 0;
+  background: var(--line);
+  border: 1px solid var(--line);
+  clear: both;
+}
+.facts div { background: var(--card); padding: 14px 16px; }
+.facts b { display: block; font-size: 1.5rem; color: var(--navy); line-height: 1.2; }
+.facts span { font-size: .85rem; color: var(--muted); }
+
+.image-credit { font-size: .8rem; color: var(--muted); }
+
+.read-next {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+}
+
+@media (max-width: 640px) {
+  .post { grid-template-columns: 1fr; }
+  .article-meta { flex-direction: column; }
+  .article-meta span + span { border-left: 0; border-top: 1px dashed rgba(22, 37, 59, .5); }
+}
+
+@media (max-width: 520px) {
+  .float-left,
+  .float-right { float: none; width: 100%; margin: 1.2em 0; }
+}

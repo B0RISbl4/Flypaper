@@ -1,0 +1,38 @@
+:root {
+  --cream: #f3ead8;
+  --paper: #ece1ca;
+  --card: #f6efe0;
+  --navy: #1d3557;
+  --navy-dark: #16253b;
+  --blue: #3d6f9e;
+  --orange: #d4532a;
+  --orange-dark: #b5431f;
+  --sunset: #e9894d;
+  --yellow: #f2c063;
+  --text: #1e2a3a;
+  --muted: #5a6475;
+  --line: #cdbf9f;
+  --photo-white: #fbf8f0;
+  --kraft: #d6b47a;
+  --flap: #0f151f;
+
+  --font-body: "Golos Text", Arial;
+  --font-label: "Oswald", "Arial Narrow";
+
+  --container: 1200px;
+  --gutter: 16px;
+  --header-h: 72px;
+  --radius: 4px;
+  --shadow: 0 2px 0 rgba(29, 53, 87, .12), 0 10px 24px -14px rgba(29, 53, 87, .45);
+
+  --halftone: radial-gradient(circle, rgba(22, 37, 59, .36) 0 .9px, transparent 1.3px) 0 0 / 4px 4px;
+  --halftone-light: radial-gradient(circle, rgba(243, 234, 216, .14) 0 .9px, transparent 1.3px) 0 0 / 4px 4px;
+}
+
+@media (max-width: 959px) {
+  :root { --header-h: 64px; }
+}
+
+@media (min-width: 768px) {
+  :root { --gutter: 32px; }
+}

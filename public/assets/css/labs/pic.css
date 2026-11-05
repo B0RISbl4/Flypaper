@@ -1,0 +1,305 @@
+.picture{
+    position:relative;
+    width: 200px;
+    height:200px;
+    overflow:hidden;
+    background:white;
+    border:1px solid lightgray;
+    box-shadow:0 1px 4px gray;
+    container-type:size;
+}
+
+.ring{
+    position:absolute;
+    left:0;
+    top:0;
+    width:200%;
+    height:100%;
+    border-radius:100%;
+}
+
+.floor{
+    position:absolute;
+    left:0;
+    bottom:0;
+    width:100%;
+    height:24%;
+    background:repeating-linear-gradient(to right,#ffd400 0 6.25%, #f3a300 6.25% 12.5%);
+}
+
+.grass{
+    position:absolute;
+    left:80%;
+    top:58%;
+    width:21%;
+    height:22%;
+}
+
+.blade{
+    position:absolute;
+    width:27%;
+    transform-origin:100% 50%;
+}
+.blade .ring{
+    border-left:1.5cqw solid #7bad42;
+}
+.blade1{
+    left:0;
+    top:22%;
+    height:77%;
+}
+.blade2{
+    left:0;
+    top:0;
+    height:100%;
+    transform:rotate(170deg);
+}
+.blade3{
+    left:72%;
+    top:31%;
+    height:68%;
+}
+
+.branch{
+    position:absolute;
+    left:52%;
+    top:3.5%;
+    width:57%;
+    height:20%;
+}
+.stick{
+    position:absolute;
+    left:0;
+    top:26%;
+    width:92%;
+    height:17%;
+    background:#54251f;
+    border-radius:100%;
+    transform:rotate(-31deg);
+}
+.leaf{
+    position:absolute;
+    width:34%;
+    height:31%;
+    background:#7bad42;
+    border-radius:100% 0 100% 0;
+}
+.leaf1{
+    left:13%;
+    top:0;
+    transform:rotate(14deg);
+}
+.leaf2{
+    left:65%;
+    top:21%;
+    transform:rotate(48deg);
+}
+.leaf3{
+    left:39%;
+    top:68%;
+    transform:rotate(65deg);
+}
+
+.dino{
+    position:absolute;
+    left:-5%;
+    top:8%;
+    width:72%;
+    height:77%;
+}
+
+.tail{
+    position:absolute;
+    left:0;
+    top:21%;
+    width:34%;
+    height:51%;
+    transform-origin:100% 50%;
+    transform:rotate(-30deg);
+}
+.tail .ring{
+    border-left:10cqw solid #8bc34a;
+}
+
+.body{
+    position:absolute;
+    left:21%;
+    top:37%;
+    width:50%;
+    height:40%;
+    background:radial-gradient(circle at 63% 61%,#edf7c5 0,#c0df68 25%,#95c72e 57%,#8bc34a 100%);
+    border-radius:58% 50% 44% 58%;
+}
+
+.neck{
+    position:absolute;
+    left:59%;
+    top:25%;
+    width:13%;
+    height:19%;
+    background-color:#8bc34a;
+    transform:rotate(30deg);
+}
+
+.arm{
+    position:absolute;
+    width:29%;
+    height:18%;
+    transform-origin:0 23%;
+    transform:rotate(10deg);
+}
+.shoulder{
+    position:absolute;
+    left:0;
+    top:0;
+    width:95%;
+    height:46%;
+    background:currentColor;
+    border-radius:16% / 50%;
+}
+.hand{
+    position:absolute;
+    left:74%;
+    top:11%;
+    width:26%;
+    height:89%;
+    background:currentColor;
+    border-radius:45%;
+}
+.left-arm{
+    left:56%;
+    top:57%;
+    color:#70a91a;
+}
+.right-arm{
+    left:66%;
+    top:48%;
+    color:#5c8b15;
+}
+
+.leg{
+    position:absolute;
+    width:22%;
+}
+.shin{
+    position:absolute;
+    left:0;
+    top:0;
+    width:58%;
+    height:91%;
+    background:currentColor;
+    border-radius:45%;
+}
+.foot{
+    position:absolute;
+    left:0;
+    bottom:0;
+    width:100%;
+    height:29%;
+    background:radial-gradient(circle at 63% 61%,#edf7c5 0,currentColor 100%);
+    border-radius:50%;
+}
+.left-leg{
+    left:49%;
+    top:67%;
+    height:30%;
+    color:#5c8b15;
+}
+.right-leg{
+    left:35%;
+    top:72%;
+    height:29%;
+    color:#70a91a;
+}
+
+.head{
+    position:absolute;
+    left:62.5%;
+    top:0;
+    width:37.5%;
+    height:33.5%;
+    transform-origin:50% 61.5%;
+    transform:rotate(10deg);
+}
+
+.antennae{
+    position:absolute;
+    display:flex;
+    justify-content:space-between;
+    left:44%;
+    top:0;
+    width:24%;
+    height:30%;
+}
+.antenna{
+    width:23%;
+    background:#82bd22;
+    border-radius:50% / 10%;
+}
+.a1{transform:rotate(-15deg)}
+.a2{transform:rotate(15deg)}
+
+.face{
+    position:absolute;
+    left:0;
+    top:23%;
+    width:100%;
+    height:77%;
+    background:#82bd22;
+    border-radius:54% 48% 46% 49%;
+}
+
+.eyes{
+    position:absolute;
+    display:flex;
+    justify-content:space-between;
+    left:20%;
+    top:20%;
+    width:44%;
+    height:30%;
+}
+.eye{
+    position:relative;
+    width:33%;
+    background:black;
+    border-radius:50%;
+}
+.glint{
+    position:absolute;
+    left:25%;
+    top:8%;
+    width:38%;
+    height:33%;
+    background:white;
+    border-radius:50%;
+}
+
+.nostrils{
+    position:absolute;
+    display:flex;
+    justify-content:space-between;
+    left:70%;
+    top:55%;
+    width:17%;
+    height:7%;
+}
+.nostril{
+    width:33%;
+    background:#477511;
+    border-radius:50%;
+}
+
+.teeth{
+    position:absolute;
+    display:flex;
+    justify-content:space-between;
+    left:28%;
+    top:80%;
+    width:50%;
+    height:20%;
+}
+.tooth{
+    width:22%;
+    background:white;
+    clip-path:polygon(0 0, 100% 0, 50% 100%);
+}

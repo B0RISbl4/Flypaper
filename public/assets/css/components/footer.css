@@ -1,0 +1,44 @@
+.site-footer {
+  position: relative;
+  margin-top: clamp(40px, 6vw, 72px);
+  background: var(--navy);
+  color: var(--cream);
+}
+.site-footer::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--halftone-light);
+  pointer-events: none;
+}
+.site-footer__inner {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 24px;
+  padding-block: 32px;
+}
+.footer-quote { margin: 0; text-align: center; }
+.footer-quote blockquote {
+  margin: 0;
+  font-size: clamp(1.05rem, 1.8vw, 1.3rem);
+  font-style: italic;
+  line-height: 1.35;
+}
+.footer-quote figcaption {
+  margin-top: 6px;
+  font-family: var(--font-label);
+  font-size: .8rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  opacity: .6;
+}
+.footer-nav { display: flex; flex-wrap: wrap; gap: 6px 20px; margin: 0; padding: 0; list-style: none; }
+.footer-nav a { color: var(--cream); text-decoration: none; font-size: .9rem; }
+.footer-nav a:hover { color: var(--sunset); }
+
+@media (max-width: 959px) {
+  .site-footer__inner { grid-template-columns: 1fr; justify-items: start; }
+  .footer-quote { text-align: left; }
+}
