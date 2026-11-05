@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Flypaper</title>
+  <meta name="description" content="Личный авиа-сайт: статьи, галерея споттинга, лабораторные по вёрстке, живые обои и гостевая книга.">
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;700;800&family=Oswald:wght@500;600&display=swap">
+  <link rel="stylesheet" href="assets/css/main.css">
+  <link rel="stylesheet" href="assets/css/pages/home.css">
+  <script type="module" src="assets/js/main.js"></script>
+  <script type="module" src="assets/js/pages/home.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">К содержимому</a>
+  <header class="site-header">
+    <div class="container site-header__inner">
+      <a class="logo" href="index.html" aria-label="Flypaper — на главную"><span class="logo__mark" aria-hidden="true"></span><span class="logo__text">Fly<span>paper</span></span></a>
+      <button class="burger" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="Открыть меню">
+        <span class="burger__bar"></span>
+      </button>
+      <nav class="nav" id="site-nav" aria-label="Основное меню">
+        <ul class="nav__list">
+          <li><a class="nav__link is-active" href="index.html" aria-current="page">Главная</a></li>
+          <li><a class="nav__link" href="articles/index.html">Статьи</a></li>
+          <li><a class="nav__link" href="gallery/index.html">Галерея</a></li>
+          <li><a class="nav__link" href="labs/index.html">Лабы</a></li>
+          <li><a class="nav__link" href="wallpapers/index.html">Обои</a></li>
+          <li><a class="nav__link" href="guestbook/index.html">Гостевая</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+<section class="hero halftone">
+  <div class="container hero__content">
+    <p class="label">Личный авиа-журнал</p>
+    <h1>Мир ближе, чем кажется</h1>
+    <div class="hero__actions">
+      <a class="btn arrow" href="articles/index.html">Читать статьи</a>
+      <a class="btn btn--ghost" href="gallery/index.html">Смотреть галерею</a>
+    </div>
+  </div>
+</section>
+
+<section class="section container" aria-labelledby="sections-title">
+  <h2 id="sections-title" class="label sections-title">Разделы сайта</h2>
+  <div class="cards">
+    <a class="card" href="articles/index.html">
+      <img class="card__img" src="assets/img/photos/a340-landing.jpg" alt="Airbus A340-600 Lufthansa на посадке" width="1280" height="720">
+      <div class="card__body">
+        <h3 class="card__title">Статьи</h3>
+        <p class="card__text">Новости и истории о самолётах и не только.</p>
+        <span class="arrow" aria-hidden="true"></span>
+      </div>
+    </a>
+    <a class="card" href="gallery/index.html">
+      <img class="card__img" src="assets/img/gallery/15.jpg" alt="Airbus A330 «Аэрофлота» на рулёжке в Пулково" width="1400" height="952">
+      <div class="card__body">
+        <h3 class="card__title">Галерея</h3>
+        <p class="card__text">Мои фотографии со споттинга.</p>
+        <span class="arrow" aria-hidden="true"></span>
+      </div>
+    </a>
+    <a class="card" href="labs/index.html">
+      <img class="card__img" src="assets/img/photos/ac-cockpit.jpg" alt="Вид из кабины истребителя" width="1400" height="788">
+      <div class="card__body">
+        <h3 class="card__title">Лабы</h3>
+        <p class="card__text">Работы по предмету «Вёрстка».</p>
+        <span class="arrow" aria-hidden="true"></span>
+      </div>
+    </a>
+    <a class="card" href="wallpapers/index.html">
+      <img class="card__img" src="assets/img/photos/wallpaper-preview.jpg" alt="Живые обои: хвост S7 на фоне закатного неба" width="1200" height="800">
+      <div class="card__body">
+        <h3 class="card__title">Обои</h3>
+        <p class="card__text">Живые обои: самолёты над Петербургом.</p>
+        <span class="arrow" aria-hidden="true"></span>
+      </div>
+    </a>
+  </div>
+</section>
+
+<section class="container" aria-label="Свежая статья и табло Пулково">
+  <div class="feature-row">
+    <article class="feature halftone">
+      <img class="feature__img" src="assets/img/photos/a340-mountain.jpg" alt="Airbus A340-600 Lufthansa на заходе на посадку" width="1132" height="778">
+      <div class="feature__body">
+        <p class="label">Свежая статья</p>
+        <h2>Последний рейс <span class="nowrap">A340-600</span></h2>
+        <p>18 октября 2026 года Lufthansa выполнила последний регулярный рейс на «летающем карандаше» — и закрыла почти 23-летнюю главу.</p>
+        <a class="btn arrow" href="articles/a340-600.html">Читать</a>
+      </div>
+    </article>
+
+    <aside class="board" aria-labelledby="board-title">
+      <div class="board__head">
+        <h2 class="board__title" id="board-title">Пулково <span>LED</span></h2>
+        <span class="board__clock" id="board-clock" aria-label="Московское время">--:--</span>
+      </div>
+      <div class="board__tabs" role="tablist" aria-label="Табло">
+        <button class="board__tab is-active" type="button" role="tab" aria-selected="true" data-board="dep">Вылет</button>
+        <button class="board__tab" type="button" role="tab" aria-selected="false" data-board="arr">Прилёт</button>
+      </div>
+      <div class="board__cols" aria-hidden="true"><span>Время</span><span>Рейс</span><span>Направление</span><span>Статус</span></div>
+      <ol class="board__list" id="board-list" aria-live="polite"></ol>
+      <p class="board__note">Загрузка расписания…</p>
+    </aside>
+  </div>
+</section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container site-footer__inner">
+      <a class="logo logo--light" href="index.html" aria-label="Flypaper — на главную"><span class="logo__mark" aria-hidden="true"></span><span class="logo__text">Fly<span>paper</span></span></a>
+      <figure class="footer-quote">
+        <blockquote>«И только небо обещало успокоение»</blockquote>
+        <figcaption>Лев Толстой, «Война и мир»</figcaption>
+      </figure>
+      <nav aria-label="Меню в подвале">
+        <ul class="footer-nav">
+          <li><a href="index.html">Главная</a></li>
+          <li><a href="articles/index.html">Статьи</a></li>
+          <li><a href="gallery/index.html">Галерея</a></li>
+          <li><a href="labs/index.html">Лабы</a></li>
+          <li><a href="wallpapers/index.html">Обои</a></li>
+          <li><a href="guestbook/index.html">Гостевая</a></li>
+        </ul>
+      </nav>
+    </div>
+  </footer>
+</body>
+</html>

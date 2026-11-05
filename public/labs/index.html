@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Лабораторные по вёрстке — Flypaper</title>
+  <meta name="description" content="Лабораторные работы по дисциплине «Вёрстка».">
+  <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;700;800&family=Oswald:wght@500;600&display=swap">
+  <link rel="stylesheet" href="../assets/css/main.css">
+  <link rel="stylesheet" href="../assets/css/pages/labs.css">
+  <link rel="stylesheet" href="../assets/css/labs/pic.css">
+  <link rel="stylesheet" href="../assets/css/labs/frog.css">
+  <script type="module" src="../assets/js/main.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">К содержимому</a>
+  <header class="site-header">
+    <div class="container site-header__inner">
+      <a class="logo" href="../index.html" aria-label="Flypaper — на главную"><span class="logo__mark" aria-hidden="true"></span><span class="logo__text">Fly<span>paper</span></span></a>
+      <button class="burger" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="Открыть меню">
+        <span class="burger__bar"></span>
+      </button>
+      <nav class="nav" id="site-nav" aria-label="Основное меню">
+        <ul class="nav__list">
+          <li><a class="nav__link" href="../index.html">Главная</a></li>
+          <li><a class="nav__link" href="../articles/index.html">Статьи</a></li>
+          <li><a class="nav__link" href="../gallery/index.html">Галерея</a></li>
+          <li><a class="nav__link is-active" href="../labs/index.html" aria-current="page">Лабы</a></li>
+          <li><a class="nav__link" href="../wallpapers/index.html">Обои</a></li>
+          <li><a class="nav__link" href="../guestbook/index.html">Гостевая</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+<div class="container">
+  <header class="page-head">
+    <nav class="breadcrumbs" aria-label="Навигационная цепочка"><a href="../index.html">Главная</a> / Лабы</nav>
+    <h1>Лабораторные работы</h1>
+    <p class="page-head__lead">Студент: Борис Евстигнеев, группа 5130903/40302</p>
+  </header>
+
+  <div class="lab-works">
+    <figure class="lab-work">
+      <div class="frame filled">
+        <div class="picture">
+          <div class="grass">
+            <div class="blade blade1"><div class="ring"></div></div>
+            <div class="blade blade2"><div class="ring"></div></div>
+            <div class="blade blade3"><div class="ring"></div></div>
+          </div>
+          <div class="floor"></div>
+          <div class="branch">
+            <div class="stick"></div>
+            <div class="leaf leaf1"></div>
+            <div class="leaf leaf2"></div>
+            <div class="leaf leaf3"></div>
+          </div>
+          <div class="dino">
+            <div class="tail"><div class="ring"></div></div>
+            <div class="arm right-arm">
+              <div class="shoulder"></div>
+              <div class="hand"></div>
+            </div>
+            <div class="neck"></div>
+            <div class="leg left-leg">
+              <div class="shin"></div>
+              <div class="foot"></div>
+            </div>
+            <div class="leg right-leg">
+              <div class="shin"></div>
+              <div class="foot"></div>
+            </div>
+            <div class="body"></div>
+            <div class="head">
+              <div class="antennae">
+                <div class="antenna a1"></div>
+                <div class="antenna a2"></div>
+              </div>
+              <div class="face">
+                <div class="eyes">
+                  <div class="eye"><div class="glint"></div></div>
+                  <div class="eye"><div class="glint"></div></div>
+                </div>
+                <div class="nostrils">
+                  <div class="nostril"></div>
+                  <div class="nostril"></div>
+                </div>
+                <div class="teeth">
+                  <div class="tooth"></div>
+                  <div class="tooth"></div>
+                  <div class="tooth"></div>
+                  <div class="tooth"></div>
+                </div>
+              </div>
+            </div>
+            <div class="arm left-arm">
+              <div class="shoulder"></div>
+              <div class="hand"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <figcaption>Работа 1</figcaption>
+    </figure>
+    <figure class="lab-work">
+              <button type="button" class="scene" aria-label="Удерживайте, чтобы превратить лягушку в принцессу">
+          <svg class="motion-path" viewBox="0 0 196 196" preserveAspectRatio="none" aria-hidden="true">
+              <path id="frog-path" d="M 150 -37 C 110 -20 85 75 45 50" fill="none" stroke="none" />
+          </svg>
+          <span class="caption caption-hover">Ты кто?</span>
+          <span class="caption caption-click">Я принцесса</span>
+
+          <img class="prince prince-normal" src="../assets/img/labs/prince1.png" alt="Принц">
+
+          <img class="prince prince-body" src="../assets/img/labs/prince2.png" alt="">
+          <img class="prince-head" src="../assets/img/labs/prince3.png" alt="">
+
+          <span class="frog-motion">
+              <img class="frog" src="../assets/img/labs/frog1.png" alt="Лягушка">
+          </span>
+
+          <img class="princess" src="../assets/img/labs/princess.png" alt="Принцесса">
+      </button>
+      <figcaption>Работа 2</figcaption>
+    </figure>
+  </div>
+</div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container site-footer__inner">
+      <a class="logo logo--light" href="../index.html" aria-label="Flypaper — на главную"><span class="logo__mark" aria-hidden="true"></span><span class="logo__text">Fly<span>paper</span></span></a>
+      <figure class="footer-quote">
+        <blockquote>«И только небо обещало успокоение»</blockquote>
+        <figcaption>Лев Толстой, «Война и мир»</figcaption>
+      </figure>
+      <nav aria-label="Меню в подвале">
+        <ul class="footer-nav">
+          <li><a href="../index.html">Главная</a></li>
+          <li><a href="../articles/index.html">Статьи</a></li>
+          <li><a href="../gallery/index.html">Галерея</a></li>
+          <li><a href="../labs/index.html">Лабы</a></li>
+          <li><a href="../wallpapers/index.html">Обои</a></li>
+          <li><a href="../guestbook/index.html">Гостевая</a></li>
+        </ul>
+      </nav>
+    </div>
+  </footer>
+</body>
+</html>

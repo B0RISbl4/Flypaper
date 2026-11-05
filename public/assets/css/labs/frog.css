@@ -1,0 +1,202 @@
+.scene {
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-start;
+    container-type: inline-size;
+    width: 200px;
+    height: 200px;
+    overflow: hidden;
+    appearance: none;
+    cursor: pointer;
+    padding: 0;
+    border: 2px solid #222;
+    font: inherit;
+    transition: filter .5s ease;
+    background:
+        radial-gradient(circle at 72% 25%, rgba(255,255,255,.75), transparent 35%),
+        linear-gradient(180deg, #e6a7ef 0%, #c66cdd 48%, #a83fc5 100%);
+}
+
+.scene:focus-visible {
+    outline: 3px solid #222;
+    outline-offset: 4px;
+}
+
+.motion-path {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    pointer-events: none;
+}
+
+.caption {
+    position: absolute;
+    top: 6%;
+    left: 0;
+    z-index: 10;
+    width: 100%;
+    text-align: center;
+    font-size: 9cqi;
+    font-weight: 700;
+    color: #222;
+    opacity: 0;
+    transform: translateX(9cqi) rotate(15deg);
+    text-shadow: 0.5cqi 1cqi rgba(255,255,255,.7);
+}
+
+.prince-normal {
+    position: absolute;
+    z-index: 2;
+    width: 40%;
+    height: auto;
+    left: 2.5%;
+    bottom: 2.5%;
+}
+
+.prince-body {
+    position: absolute;
+    z-index: 2;
+    width: 40%;
+    height: auto;
+    left: 2.5%;
+    bottom: 2.5%;
+    opacity: 0;
+}
+
+.prince-head {
+    position: absolute;
+    z-index: 4;
+    width: 17.5%;
+    height: auto;
+    left: 16%;
+    bottom: 68%;
+    opacity: 0;
+    transform-origin: 50% 80%;
+}
+
+.frog-motion {
+    position: absolute;
+    z-index: 5;
+    width: 29%;
+    aspect-ratio: 81 / 89;
+    left: 55%;
+    bottom: 22%;
+    opacity: 0;
+    offset-anchor: 50% 50%;
+    offset-path: url("#frog-path");
+    offset-distance: 0%;
+    offset-rotate: 0deg;
+}
+
+.frog {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+.princess {
+    position: absolute;
+    z-index: 6;
+    width: 53%;
+    height: auto;
+    left: 46%;
+    bottom: -3.5%;
+    opacity: 0;
+    transform: scale(.01);
+    transform-origin: 88% 79%;
+    pointer-events: none;
+    transition: opacity .45s ease, transform .45s ease;
+}
+
+.scene:hover .prince-normal {
+    opacity: 0;
+}
+
+.scene:hover .prince-body,
+.scene:hover .prince-head {
+    opacity: 1;
+}
+
+.scene:hover .frog-motion {
+    opacity: 1;
+    animation: frog-to-prince 1.4s cubic-bezier(.42, 0, .58, 1) forwards;
+}
+
+.scene:hover .frog-motion:hover .frog {
+    animation: frog-bounce .7s ease-in-out infinite;
+}
+
+.scene:hover .caption-hover {
+    opacity: 1;
+}
+
+.scene:hover .prince-body:hover ~ .prince-head,
+.scene:hover .prince-head:hover {
+    animation: head-shake .5s ease-in-out infinite;
+}
+
+.scene:active .caption-hover {
+    opacity: 0;
+}
+
+.scene:active .caption-click {
+    opacity: 1;
+}
+
+.scene:active .prince-body,
+.scene:active .prince-head,
+.scene:active .frog-motion {
+    opacity: 0;
+}
+
+.scene:active .prince-normal {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.scene:active .frog {
+    animation: none;
+}
+
+.scene:active .princess {
+    opacity: 1;
+    transform: scale(.95);
+}
+
+.scene:active {
+    filter: sepia(1);
+}
+
+.scene:active .prince-head:hover {
+    animation: none;
+}
+
+@keyframes frog-to-prince {
+    0% {
+        offset-distance: 0%;
+    }
+    100% {
+        offset-distance: 100%;
+    }
+}
+
+@keyframes frog-bounce {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-3.5cqi);
+    }
+}
+
+@keyframes head-shake {
+    0%, 100% {
+        transform: rotate(0);
+    }
+    50% {
+        transform: rotate(12deg);
+    }
+}

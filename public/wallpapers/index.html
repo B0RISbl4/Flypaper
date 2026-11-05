@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Живые обои — Flypaper</title>
+  <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=Barlow:ital,wght@1,800&display=swap">
+  <link rel="stylesheet" href="../assets/css/pages/wallpapers.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/suncalc@1.9.0/suncalc.js"></script>
+  <script type="module" src="../assets/js/wallpapers/main.js"></script>
+</head>
+<body>
+
+<svg class="sprite" width="0" height="0" aria-hidden="true">
+  <symbol id="i-plane" viewBox="0 0 24 24"><path d="M12 2l1.8 7.6L22 14v2l-8.2-2.2L13 19l3 2v1l-4-1-4 1v-1l3-2-.8-5.2L2 16v-2l8.2-4.4z"/></symbol>
+  <symbol id="i-reg" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M12 9.5v5M9.5 12h5"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></symbol>
+  <symbol id="i-alt" viewBox="0 0 24 24"><path d="M2 19l7.5-13 4 6.5L16 9l6 10z"/></symbol>
+  <symbol id="i-spd" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 13l3.5-4M10 3h4"/></symbol>
+  <symbol id="i-hdg" viewBox="0 0 24 24"><path d="M3 11.5L21 3l-8.5 18-1.5-7.5z"/></symbol>
+  <symbol id="i-dst" viewBox="0 0 24 24"><path d="M12 22s7-6.5 7-12a7 7 0 0 0-14 0c0 5.500 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/></symbol>
+</svg>
+
+<div id="poster">
+  <div id="sky"><div id="stars"></div><div id="sun"></div><div id="moon"></div></div>
+  <svg id="cf" class="clouds layer" viewBox="0 0 1600 1000" preserveAspectRatio="xMinYMax slice"></svg>
+  <svg id="cm" class="clouds layer" viewBox="0 0 1600 1000" preserveAspectRatio="xMinYMax slice"></svg>
+  <div id="far" class="layer dyn"><svg id="planeSvg"></svg></div>
+  <svg id="cc" class="clouds layer" viewBox="0 0 1600 1000" preserveAspectRatio="xMinYMax slice"></svg>
+  <svg id="cn" class="clouds layer" viewBox="0 0 1600 1000" preserveAspectRatio="xMinYMax slice"></svg>
+  <img id="tail" class="layer dyn" alt="Хвост самолёта с ливреей авиакомпании" hidden>
+  <div id="grain"></div>
+
+  <a id="site" href="../index.html">← Flypaper<span id="demoNote">демо-режим</span></a>
+
+  <aside id="info" class="dyn" aria-live="polite">
+    <div id="clear">Clear sky</div>
+    <div class="data">
+      <div id="airline"></div>
+      <div id="route">
+        <div><div class="code" id="from"></div><div class="city" id="fromCity"></div></div>
+        <div class="arrow">→</div>
+        <div class="to"><div class="code" id="to"></div><div class="city" id="toCity"></div></div>
+      </div>
+      <hr>
+      <div class="specs">
+      <div class="row"><svg class="ic f"><use href="#i-plane"/></svg><span class="k">Aircraft</span><span class="v" id="vModel"></span></div>
+      <div class="row"><svg class="ic"><use href="#i-reg"/></svg><span class="k">Registration</span><span class="v" id="vReg"><span id="registrationText"></span> <img class="flag" id="countryFlag" alt=""></span></div>
+      </div>
+      <hr>
+      <div class="specs">
+      <div class="row"><svg class="ic f"><use href="#i-alt"/></svg><span class="k">Altitude</span><span class="v" id="vAlt"></span></div>
+      <div class="row"><svg class="ic"><use href="#i-spd"/></svg><span class="k">Ground speed</span><span class="v" id="vSpd"></span></div>
+      <div class="row"><svg class="ic f"><use href="#i-hdg"/></svg><span class="k">Heading</span><span class="v" id="vHdg"></span></div>
+      <div class="row"><svg class="ic"><use href="#i-dst"/></svg><span class="k">Distance</span><span class="v" id="vDst"></span></div>
+      </div>
+    </div>
+  </aside>
+</div>
+</body>
+</html>
